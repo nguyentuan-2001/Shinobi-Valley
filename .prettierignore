@@ -1,0 +1,12 @@
+# Chỉ format code, không đụng vào tài liệu thiết kế/asset/config Claude
+docs/
+art-refs/
+public/
+node_modules/
+dist/
+dist-ssr/
+.claude/
+CLAUDE.md
+*.md
+*.png
+*.jpg

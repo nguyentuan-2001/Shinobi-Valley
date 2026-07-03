@@ -53,3 +53,4 @@ chore: mở rộng allow-list permission cho lệnh python/pip/find
 - Body giải thích **why**, không lặp lại **what** (diff đã nói rồi).
 - Commit asset (ảnh/âm thanh) tách riêng khỏi commit code dùng asset đó, trừ khi asset quá nhỏ/gắn chặt với 1 tính năng.
 - Không tự ý `git push` hay tạo commit trừ khi được yêu cầu rõ ràng — gõ lệnh `/save` (xem `.claude/commands/save.md`) tính là yêu cầu rõ ràng cho lần đó.
+- **Trước khi commit code, luôn chạy `yarn format` (Prettier) để format trước.** Chỉ áp dụng cho code thật (`src/`, `index.html`, config) — `.prettierignore` đã loại `docs/`, `art-refs/`, `public/`, `*.md` ra khỏi phạm vi format. Nếu Prettier đổi file nào, add luôn phần đổi đó vào cùng commit code tương ứng (không tạo commit `style` riêng cho việc format tự động này, trừ khi format cả 1 lượt lớn không gắn với thay đổi nào khác).
