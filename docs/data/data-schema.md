@@ -398,6 +398,7 @@ Game sử dụng kiến trúc **Data Driven** — toàn bộ nội dung nằm tr
 ```json
 {
   "player_id": "p001",
+  "gender": "male",
   "farm_tiles": [
     {
       "x": 0, "y": 0,
@@ -427,6 +428,7 @@ Game sử dụng kiến trúc **Data Driven** — toàn bộ nội dung nằm tr
 | Trường | Kiểu | Mô tả |
 |---|---|---|
 | `player_id` | string | ID người chơi |
+| `gender` | enum | `male / female` — chọn 1 lần lúc tạo tài khoản/nhân vật, chỉ đổi model+animation, không đổi được sau (hoặc đổi mất phí, tùy quyết định sau), không ảnh hưởng stat/cốt truyện |
 | `farm_tiles` | array | Trạng thái từng ô đất trong nông trại |
 | `farm_tiles[].state` | enum | `empty / tilled / planted / ready / withered` |
 | `farm_tiles[].moisture` | float | Độ ẩm hiện tại của ô đất (50–100) |
