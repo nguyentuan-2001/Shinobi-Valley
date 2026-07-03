@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(magick -version)",
+      "Bash(python -c \"from PIL import Image; im = Image.open\\('c:/Project/Shinobi-Valley/public/images/base-1.png'\\); print\\(im.size, im.mode\\)\")",
+      "Bash(python -)",
+      "Bash(find \"c:/Users/Admin/Desktop\" -iname \"*Gemini_Generated*\" 2>&1; find \"c:/Users/Admin/Downloads\" -iname \"*Gemini_Generated*\" 2>&1; find \"c:/Project/Shinobi-Valley\" -iname \"*Gemini_Generated*\" 2>&1)",
+      "Read(//c/Users/Admin/Downloads/**)",
+      "Bash(python -c \"from PIL import Image; im = Image.open\\('c:/Project/Shinobi-Valley/public/images/Gemini_Generated_Image_rrzht8rrzht8rrzh.png'\\); print\\(im.size, im.mode\\)\")",
+      "Bash(python -c \"import scipy; print\\(scipy.__version__\\)\")",
+      "Bash(pip show *)",
+      "Bash(python -c \"import onnxruntime\")",
+      "Bash(pip install *)",
+      "Bash(python -c \"import rembg; print\\('rembg ok'\\)\")",
+      "Bash(python *)",
+      "Bash(pip *)",
+      "Bash(find *)",
+      "Bash(mkdir *)",
+      "Bash(ls *)",
+      "Bash(magick *)"
+    ]
+  }
+}
