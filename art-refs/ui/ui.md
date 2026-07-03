@@ -1,6 +1,6 @@
 # UI Icons — AI Image Prompts
 
-Style chung: `2D pixel art, 32x32 icon, game UI element, clean readable design, vibrant colors, transparent background, RPG game style`
+Style chung: `2D pixel art, 32x32 icon, game UI element, clean readable design, vibrant colors, white background, RPG game style`
 
 UI cần đặc biệt: **clean, dễ đọc ở kích thước nhỏ, không quá nhiều chi tiết**.
 
@@ -253,22 +253,31 @@ UI cần đặc biệt: **clean, dễ đọc ở kích thước nhỏ, không qu
 ### Khung Item Phẩm Chất (Quality Border Frame)
 
 **Common:**
+
 ```
 2D pixel art, 36x36 item quality frame, white-grey thin border around 32x32 item slot, common quality indicator, transparent background
 ```
+
 **Rare:**
+
 ```
 2D pixel art, 36x36 item quality frame, blue glowing border around 32x32 slot, rare quality indicator, transparent background
 ```
+
 **Epic:**
+
 ```
 2D pixel art, 36x36 item quality frame, purple glowing border, animated glow pulse, epic quality indicator, transparent background
 ```
+
 **Legendary:**
+
 ```
 2D pixel art, 36x36 item quality frame, gold ornate border with corner flourishes, golden glow, legendary quality indicator, transparent background
 ```
+
 **Mythic:**
+
 ```
 2D pixel art, 36x36 item quality frame, dark crimson border with fire particle effects at corners, mythic ultimate quality indicator, transparent background
 ```

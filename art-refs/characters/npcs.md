@@ -1,6 +1,6 @@
 # NPCs — AI Image Prompts
 
-Style chung: `2D pixel art, 32x32 character sprite, clean outlines, transparent background, Vietnamese ninja village RPG style`
+Style chung: `2D pixel art, 32x32 character sprite, clean outlines, white background, Vietnamese ninja village RPG style`
 
 ---
 

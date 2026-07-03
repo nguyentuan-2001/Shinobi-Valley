@@ -1,6 +1,6 @@
 # Livestock & Products — AI Image Prompts
 
-Style chung: `2D pixel art, 32x32 sprite, clean outlines, vibrant colors, transparent background, farming game style`
+Style chung: `2D pixel art, 32x32 sprite, clean outlines, vibrant colors, white background, farming game style`
 
 ---
 

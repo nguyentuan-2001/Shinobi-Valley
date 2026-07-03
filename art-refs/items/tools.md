@@ -1,6 +1,6 @@
 # Farming Tools — AI Image Prompts
 
-Style chung: `2D pixel art, 32x32 item icon, farming tool, clean outlines, transparent background, cozy farming RPG style`
+Style chung: `2D pixel art, 32x32 item icon, farming tool, clean outlines, white background, cozy farming RPG style`
 
 ---
 

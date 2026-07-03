@@ -2,6 +2,8 @@
 
 Prompt mô tả cho toàn bộ asset trong game để gen ảnh bằng AI.
 
+2D pixel art, 32x32 resolution, top-down view, clear outlines, vibrant colors, white background, RPG game content —
+
 ---
 
 ## Cấu trúc thư mục
@@ -42,16 +44,17 @@ assets/
 
 ## Thông số kỹ thuật
 
-| Loại | Kích thước |
-|---|---|
-| Item / Icon / Tile | 32×32 px |
-| Character / NPC / Monster | 32×32 px (sprite) |
-| Mini Boss | 64×64 px |
-| Final Boss | 128×128 px |
-| Building | 64×64 px (hoặc ghép tile) |
-| Skill effect | 64×64 → 256×64 tùy chiêu |
+| Loại                      | Kích thước                |
+| ------------------------- | ------------------------- |
+| Item / Icon / Tile        | 32×32 px                  |
+| Character / NPC / Monster | 32×32 px (sprite)         |
+| Mini Boss                 | 64×64 px                  |
+| Final Boss                | 128×128 px                |
+| Building                  | 64×64 px (hoặc ghép tile) |
+| Skill effect              | 64×64 → 256×64 tùy chiêu  |
 
 **Style cố định cho mọi asset:**
+
 - 2D pixel art
 - Top-down view
 - Clean outlines
@@ -65,7 +68,7 @@ assets/
 Copy và dán vào đầu mỗi prompt:
 
 ```
-2D pixel art, 32x32, top-down view, clean outlines, vibrant colors, transparent background, RPG game asset —
+2D pixel art, 32x32, top-down view, clean outlines, vibrant colors, white background, RPG game asset —
 ```
 
 **Thêm vào cuối để tăng chất lượng:**

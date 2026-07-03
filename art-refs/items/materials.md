@@ -1,6 +1,6 @@
 # Crafting Materials — AI Image Prompts
 
-Style chung: `2D pixel art, 32x32 item icon, crafting material, clean outlines, transparent background, RPG game style`
+Style chung: `2D pixel art, 32x32 item icon, crafting material, clean outlines, white background, RPG game style`
 
 ---
 

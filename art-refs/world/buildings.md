@@ -1,6 +1,6 @@
 # Buildings & Structures — AI Image Prompts
 
-Style chung: `2D pixel art, top-down view, 32x32 tile or 64x64 building, clean outlines, vibrant colors, transparent background, cozy RPG village style`
+Style chung: `2D pixel art, top-down view, 32x32 tile or 64x64 building, clean outlines, vibrant colors, white background, cozy RPG village style`
 
 Công trình lớn dùng **64x64** hoặc ghép nhiều tile 32x32.
 
@@ -11,16 +11,19 @@ Công trình lớn dùng **64x64** hoặc ghép nhiều tile 32x32.
 ### Nhà Chính Người Chơi (Player House)
 
 **Cấp 1 — Nhà gỗ đơn sơ:**
+
 ```
 2D pixel art, 64x64 building sprite, top-down view, small rustic wooden farmhouse, warm brown wooden walls, light blue roof tiles, single wooden door with small window, chimney with smoke wisps, cozy beginner home, RPG farm style, transparent background
 ```
 
 **Cấp 2 — Nhà gỗ nâng cấp:**
+
 ```
 2D pixel art, 64x64 building sprite, top-down view, upgraded wooden farmhouse, wider floor plan, red-tile roof, two windows with flower boxes, stone foundation visible, decorative porch, cozy farm RPG, transparent background
 ```
 
 **Cấp 3 — Nhà đá cao cấp:**
+
 ```
 2D pixel art, 64x64 building sprite, top-down view, stone and wood upgraded house, grey stone lower walls, dark blue roof with gold trim, multiple windows, garden entrance path, prosperous farm owner home, transparent background
 ```

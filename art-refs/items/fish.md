@@ -1,6 +1,6 @@
 # Fish — AI Image Prompts
 
-Style chung: `2D pixel art, 32x32 item icon, fish, clean outlines, transparent background, fishing game style`
+Style chung: `2D pixel art, 32x32 item icon, fish, clean outlines, white background, fishing game style`
 
 ---
 

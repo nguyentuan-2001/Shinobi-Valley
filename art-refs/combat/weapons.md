@@ -1,6 +1,6 @@
 # Weapons — AI Image Prompts
 
-Style chung: `2D pixel art, 32x32 sprite, item icon, clean outlines, transparent background, RPG game style`
+Style chung: `2D pixel art, 32x32 sprite, item icon, clean outlines, white background, RPG game style`
 
 ---
 

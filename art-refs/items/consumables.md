@@ -1,6 +1,6 @@
 # Consumables — AI Image Prompts
 
-Style chung: `2D pixel art, 32x32 item icon, consumable item, clean outlines, transparent background, RPG fantasy style`
+Style chung: `2D pixel art, 32x32 item icon, consumable item, clean outlines, white background, RPG fantasy style`
 
 ---
 

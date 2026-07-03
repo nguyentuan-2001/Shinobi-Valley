@@ -1,6 +1,6 @@
 # Decorations — AI Image Prompts
 
-Style chung: `2D pixel art, 32x32 sprite, decoration item, clean outlines, transparent background, cozy farming village RPG style`
+Style chung: `2D pixel art, 32x32 sprite, decoration item, clean outlines, white background, cozy farming village RPG style`
 
 ---
 

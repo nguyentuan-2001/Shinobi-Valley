@@ -2,7 +2,7 @@
 
 Trang bị chia theo phẩm chất. Dùng **color aura / border glow** để phân biệt rank khi hiển thị trong inventory.
 
-Style chung: `2D pixel art, 32x32 item icon, armor/equipment piece, clean outlines, transparent background, RPG game style`
+Style chung: `2D pixel art, 32x32 item icon, armor/equipment piece, clean outlines, white background, RPG game style`
 
 ---
 
