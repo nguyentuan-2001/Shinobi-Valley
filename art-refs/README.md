@@ -2,6 +2,8 @@
 
 Prompt mô tả cho toàn bộ asset trong game để gen ảnh bằng AI.
 
+**Đọc [theme.md](theme.md) trước** — quy tắc art direction + bảng màu gốc (Global Theme Prompt, Visual Rules, Color Palette theo từng loại địa hình/vật thể, AI Negative Prompt) áp dụng cho **mọi** asset. File này (README) chỉ nói về thông số kỹ thuật (kích thước, style prefix ngắn gọn) — không lặp lại bảng màu chi tiết.
+
 2D pixel art, 32x32 resolution, top-down view, clear outlines, vibrant colors, white background, RPG game content —
 
 ---
@@ -23,7 +25,7 @@ assets/
 │   └── monsters.md       20 quái + 5 mini boss + Rồng Cổ Đại (3 phase)
 │
 ├── world/                Thế giới
-│   ├── maps.md           6 bản đồ (background, tileset, thumbnail)
+│   ├── maps.md           7 bản đồ (background, tileset, thumbnail)
 │   ├── buildings.md      Nhà cửa, cửa hàng, chuồng trại, công trình làng
 │   └── decorations.md    Trang trí ngoài trời + nội thất trong nhà
 │

@@ -2,7 +2,27 @@
 
 Dùng để gen **tileset**, **background**, và **preview thumbnail** cho từng bản đồ.
 
-Style chung: `2D pixel art, top-down view, RPG game map tileset, clean outlines, vibrant colors`
+Style chung: `2D pixel art, top-down view, RPG game map tileset, clean outlines, vibrant colors, white background`
+
+**Định hướng art (bám theo asset đã gen — xem `cave/background.png`, `crops/carrot.png`):** pixel art chi tiết có shading/dithering như RPG 16-bit (Stardew Valley, Secret of Mana) — **KHÔNG** phải vector phẳng, **KHÔNG** bóng gương/gradient mượt kiểu asset pack mobile, **KHÔNG** outline đen dày đều kiểu hoạt hình đồ chơi. Outline dùng tông màu đậm hơn của chính vật liệu (gỗ dùng nâu sậm, đá dùng xám sậm...), không dùng đen thuần. Palette ấm, hơi trầm (muted), tránh màu chói/bão hòa như sticker. Nếu prompt AI ra kết quả giống "vector cute mobile game" thay vì pixel art có texture — thêm rõ các cụm từ: `detailed hand-painted pixel art`, `soft dithering shading`, `muted color palette`, `no flat vector illustration`, `no glossy cartoon outline`.
+
+---
+
+## Map 0 — Nông Trại (Player Farm)
+
+**Level:** 1 (map khởi đầu, không có kẻ thù)
+
+### Background / Thumbnail
+
+```
+2D pixel art, top-down view, detailed hand-painted pixel art RPG farm map in the style of a 16-bit RPG (Stardew Valley, Secret of Mana), no flat vector illustration, no glossy cartoon toy style, rustic wooden farmhouse with weathered wood grain texture and shaded roof tiles, neat rows of tilled brown soil plots with visible dirt clump texture and soft shading, aged wooden water well, small animal pen with weathered wooden fence, worn dirt paths connecting farmhouse to fields, lush green grass with subtle color variation and soft dithering shading, scattered wildflowers, warm morning sunlight with gentle soft shadows, muted warm color palette, painterly pixel texture, dark warm-toned outlines instead of pure black, peaceful starting zone feel
+```
+
+### Tileset Elements
+
+```
+2D pixel art tileset sheet, detailed hand-painted pixel art matching the same art direction as this game's cave and grassland tilesets, no flat vector illustration, no glossy cartoon outline: bright green grass with soft dithering shading, dry tilled soil plot with visible dirt clump texture, watered/moist tilled soil plot with darker shaded soil, dirt path straight and corner with worn texture, weathered wooden fence sections (straight, corner, gate) with visible wood grain shading, small pond water tile with lily pad and soft reflection, aged wooden signpost, hay bale with straw texture, wood pile, grass tuft decoration, muted warm color palette, dark brown outlines instead of pure black, all on white background, 32x32 tiles
+```
 
 ---
 
@@ -19,7 +39,7 @@ Style chung: `2D pixel art, top-down view, RPG game map tileset, clean outlines,
 ### Tileset Elements
 
 ```
-2D pixel art tileset sheet, grassland theme tiles: bright green grass, dirt path, small rocks, wildflower patches (red, yellow, pink), tall grass clumps, wooden fence sections, small pond with lily pads, tree stumps, all on transparent background, 32x32 tiles
+2D pixel art tileset sheet, grassland theme tiles: bright green grass, dirt path, small rocks, wildflower patches (red, yellow, pink), tall grass clumps, wooden fence sections, small pond with lily pads, tree stumps, all on white background, 32x32 tiles
 ```
 
 ---
@@ -37,7 +57,7 @@ Style chung: `2D pixel art, top-down view, RPG game map tileset, clean outlines,
 ### Tileset Elements
 
 ```
-2D pixel art tileset sheet, bamboo forest theme tiles: bamboo stalk sections, fallen bamboo logs, green moss patches, stone lanterns, spider web patches, dense undergrowth, bamboo leaf piles, ancient stone markers, all on transparent background, 32x32 tiles
+2D pixel art tileset sheet, bamboo forest theme tiles: bamboo stalk sections, fallen bamboo logs, green moss patches, stone lanterns, spider web patches, dense undergrowth, bamboo leaf piles, ancient stone markers, all on white background, 32x32 tiles
 ```
 
 ---
@@ -55,7 +75,7 @@ Style chung: `2D pixel art, top-down view, RPG game map tileset, clean outlines,
 ### Tileset Elements
 
 ```
-2D pixel art tileset sheet, cave dungeon theme tiles: dark stone floor, cave wall sections, glowing crystal clusters (blue, purple, green), bone piles, underground pools, wooden support beams, iron torch wall sconces, cracked stone, treasure chest, all on transparent background, 32x32 tiles
+2D pixel art tileset sheet, cave dungeon theme tiles: dark stone floor, cave wall sections, glowing crystal clusters (blue, purple, green), bone piles, underground pools, wooden support beams, iron torch wall sconces, cracked stone, treasure chest, all on white background, 32x32 tiles
 ```
 
 ---
@@ -73,7 +93,7 @@ Style chung: `2D pixel art, top-down view, RPG game map tileset, clean outlines,
 ### Tileset Elements
 
 ```
-2D pixel art tileset sheet, snow mountain theme tiles: snow covered ground, ice patches, frozen pine tree sections, snowdrift piles, icicle formations, frozen cracked ice floor, snow-covered boulders, igloo structures, frosty cave entrances, all on transparent background, 32x32 tiles
+2D pixel art tileset sheet, snow mountain theme tiles: snow covered ground, ice patches, frozen pine tree sections, snowdrift piles, icicle formations, frozen cracked ice floor, snow-covered boulders, igloo structures, frosty cave entrances, all on white background, 32x32 tiles
 ```
 
 ---
@@ -91,7 +111,7 @@ Style chung: `2D pixel art, top-down view, RPG game map tileset, clean outlines,
 ### Tileset Elements
 
 ```
-2D pixel art tileset sheet, ancient forest theme tiles: massive ancient tree roots, glowing mushroom clusters, overgrown stone ruins, vine-covered walls, spirit wisps, ancient altar stones, glowing flower patches, dense ancient undergrowth, all on transparent background, 32x32 tiles
+2D pixel art tileset sheet, ancient forest theme tiles: massive ancient tree roots, glowing mushroom clusters, overgrown stone ruins, vine-covered walls, spirit wisps, ancient altar stones, glowing flower patches, dense ancient undergrowth, all on white background, 32x32 tiles
 ```
 
 ---
@@ -109,11 +129,11 @@ Style chung: `2D pixel art, top-down view, RPG game map tileset, clean outlines,
 ### Boss Arena Tileset
 
 ```
-2D pixel art tileset sheet, ancient temple boss arena tiles: dark stone floor with glowing golden rune cracks, massive stone column sections, fire brazier pedestals, broken stone rubble, ancient dragon relief carvings on walls, lava cracks in floor, dramatic lighting effects, all on transparent background, 32x32 tiles
+2D pixel art tileset sheet, ancient temple boss arena tiles: dark stone floor with glowing golden rune cracks, massive stone column sections, fire brazier pedestals, broken stone rubble, ancient dragon relief carvings on walls, lava cracks in floor, dramatic lighting effects, all on white background, 32x32 tiles
 ```
 
 ### Preview Thumbnail (cho menu màn hình chọn map)
 
 ```
-2D pixel art, 64x64 map selection icon, ancient temple shrouded in mystery, silhouette of dragon visible through dark temple gates, glowing red eyes peering from shadows, forbidding and epic, locked dungeon icon style, transparent background
+2D pixel art, 64x64 map selection icon, ancient temple shrouded in mystery, silhouette of dragon visible through dark temple gates, glowing red eyes peering from shadows, forbidding and epic, locked dungeon icon style, white background
 ```

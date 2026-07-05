@@ -44,3 +44,4 @@ Shinobi Valley là game 2D Pixel Art kết hợp farming sim và action RPG. Ng�
 - [Bản đồ](world/maps.md)
 - [Monetization](planning/monetization.md)
 - [Roadmap](planning/roadmap.md)
+- [Tiến độ hiện tại](planning/progress.md)

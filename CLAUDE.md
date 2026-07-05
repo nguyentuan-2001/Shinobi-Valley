@@ -1,5 +1,12 @@
 # Shinobi Valley — Quy tắc dự án
 
+## Quy tắc Theo dõi tiến độ
+
+File [`docs/planning/progress.md`](docs/planning/progress.md) ghi lại chức năng nào đã code xong, ở file nào, còn thiếu/lỗi gì.
+
+- **Mỗi khi thêm mới hoặc sửa xong 1 chức năng** (feature, fix quan trọng, hệ thống mới...), **phải cập nhật `progress.md` ngay trong cùng phiên làm việc đó** — không để tồn đọng qua phiên sau. Thêm dòng vào đúng mục Sprint tương ứng, hoặc vào "Vấn đề đã biết" nếu việc chưa xong hẳn/còn giới hạn.
+- Trước khi bắt đầu 1 phiên làm việc mới hoặc khi chưa rõ dự án đang tới đâu, đọc `progress.md` trước để biết trạng thái hiện tại, tránh làm lại hoặc hỏi lại những gì đã xong.
+
 ## Quy tắc Commit
 
 Dùng chuẩn **Conventional Commits**, viết tiếng Việt phần mô tả.
