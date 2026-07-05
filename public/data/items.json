@@ -1,0 +1,13 @@
+[
+  {
+    "id": "iron_ore",
+    "name": "Iron Ore",
+    "type": "material",
+    "rarity": "common",
+    "sell_price": 40,
+    "stack_max": 99,
+    "description": "Quặng sắt khai thác từ mỏ đá.",
+    "source": ["mine", "golem_drop"],
+    "crafting_tag": ["metal", "smithing"]
+  }
+]

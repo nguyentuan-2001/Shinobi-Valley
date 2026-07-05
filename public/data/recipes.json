@@ -1,0 +1,17 @@
+[
+  {
+    "id": "craft_iron_sword",
+    "result_item": "iron_sword",
+    "result_rank": "common",
+    "result_qty": 1,
+    "type": "fixed",
+    "station": "blacksmith",
+    "station_level": 1,
+    "ingredients": [
+      { "item": "iron_ore", "qty": 5 },
+      { "item": "wood", "qty": 8 }
+    ],
+    "craft_time": 0,
+    "unlock_level": 1
+  }
+]

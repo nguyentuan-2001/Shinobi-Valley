@@ -1,0 +1,21 @@
+[
+  {
+    "id": "wild_rabbit",
+    "name": "Thỏ hoang",
+    "map": "grassland",
+    "type": "normal",
+    "level": 2,
+    "hp": 80,
+    "atk": 8,
+    "def": 2,
+    "move_speed": 90,
+    "exp": 15,
+    "drop_table": [
+      { "item": "monster_core", "chance": 0.8, "qty_min": 1, "qty_max": 2 },
+      { "item": "rabbit_fur", "chance": 0.5, "qty_min": 1, "qty_max": 1 }
+    ],
+    "drop_gold_min": 10,
+    "drop_gold_max": 25,
+    "is_boss": false
+  }
+]

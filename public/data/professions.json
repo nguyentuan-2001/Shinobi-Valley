@@ -1,0 +1,22 @@
+[
+  {
+    "id": "farmer",
+    "name": "Nông Dân",
+    "max_level": 10,
+    "xp_per_level": 100,
+    "unlock_condition": "plant_10_crops",
+    "xp_sources": [
+      { "action": "water_tile", "xp": 1 },
+      { "action": "plant_crop", "xp": 2 },
+      { "action": "harvest_crop", "xp": 5 },
+      { "action": "use_fertilizer", "xp": 3 }
+    ],
+    "level_rewards": [
+      { "level": 1, "effect": "moisture_decay_multiplier", "value": 0.9 },
+      { "level": 3, "effect": "seed_cost_discount", "value": 0.1 },
+      { "level": 5, "effect": "moisture_decay_multiplier", "value": 0.75 },
+      { "level": 7, "effect": "harvest_yield_bonus_chance", "value": 0.1 },
+      { "level": 10, "effect": "moisture_decay_multiplier", "value": 0.5 }
+    ]
+  }
+]

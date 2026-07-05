@@ -1,0 +1,17 @@
+[
+  {
+    "id": "iron_chestplate",
+    "name": "Giáp sắt",
+    "slot": "chest",
+    "rank": "epic",
+    "def": 18,
+    "hp_bonus": 0,
+    "sub_stats": ["crit", "life_steal"],
+    "craft_recipe": {
+      "iron_ore": 15,
+      "crystal": 5
+    },
+    "unlock_level": 30,
+    "enhancement_max": 10
+  }
+]

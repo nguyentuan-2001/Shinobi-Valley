@@ -1,0 +1,14 @@
+[
+  {
+    "id": "salmon",
+    "name": "Cá Hồi",
+    "rarity": "rare",
+    "sell_price": 150,
+    "location": ["river", "cave_pool"],
+    "catch_time_min": 15,
+    "catch_time_max": 30,
+    "sweet_zone_size": 0.25,
+    "luck_required": 0,
+    "night_only": false
+  }
+]

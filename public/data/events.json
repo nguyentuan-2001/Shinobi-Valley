@@ -1,0 +1,19 @@
+[
+  {
+    "id": "spring_festival",
+    "name": "Lễ Hội Mùa Xuân",
+    "duration_days": 7,
+    "currency": "event_token",
+    "activities": ["plant_special_crop", "defeat_event_boss", "fishing_contest"],
+    "rewards": [
+      { "tokens": 100, "reward": "exclusive_skin" },
+      { "tokens": 50, "reward": "rare_seed_pack" }
+    ],
+    "event_boss": {
+      "name": "Linh Dương Mùa Xuân",
+      "level": 25,
+      "spawn_location": "grassland",
+      "respawn_hours": 6
+    }
+  }
+]

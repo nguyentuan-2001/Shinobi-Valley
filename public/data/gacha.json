@@ -1,0 +1,24 @@
+[
+  {
+    "id": "standard_pool",
+    "name": "Hòm Vũ Khí Chuẩn",
+    "currency": "silver",
+    "cost_per_pull": 500,
+    "cost_10_pull": 4500,
+    "free_daily_pull": true,
+    "rates": {
+      "common": 0.55,
+      "rare": 0.28,
+      "epic": 0.12,
+      "legendary": 0.04,
+      "mythic": 0.01
+    },
+    "pity": {
+      "guaranteed_rare_at": 10,
+      "soft_pity_starts": 40,
+      "soft_pity_legendary_bonus_per_pull": 0.02,
+      "hard_pity_legendary_at": 60,
+      "hard_pity_mythic_at": 120
+    }
+  }
+]

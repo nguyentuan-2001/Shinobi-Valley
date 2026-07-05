@@ -1,0 +1,20 @@
+[
+  {
+    "id": "q001_first_harvest",
+    "name": "Thu hoạch đầu tiên",
+    "giver": "village_chief",
+    "type": "gather",
+    "objective": {
+      "item": "carrot",
+      "quantity": 5
+    },
+    "reward": {
+      "gold": 200,
+      "exp": 100,
+      "item": "iron_hoe"
+    },
+    "prerequisite_quest": null,
+    "unlock_level": 1,
+    "story_quest": true
+  }
+]

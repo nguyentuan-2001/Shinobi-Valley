@@ -1,0 +1,19 @@
+[
+  {
+    "id": "quick_slash",
+    "name": "Chém nhanh",
+    "class": "swordsman",
+    "skill_index": 1,
+    "unlock_level": 1,
+    "mp_cost": 10,
+    "cooldown": 0,
+    "damage_multiplier": 1.2,
+    "hits": 1,
+    "range": "melee",
+    "aoe": false,
+    "aoe_radius": 0,
+    "effect": null,
+    "effect_duration": 0,
+    "type": "active"
+  }
+]

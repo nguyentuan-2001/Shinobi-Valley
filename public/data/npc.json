@@ -1,0 +1,12 @@
+[
+  {
+    "id": "seed_seller",
+    "name": "Người bán hạt giống",
+    "location": "village",
+    "shop_type": "seed",
+    "quest_giver": false,
+    "dialogue_default": "Hôm nay bạn muốn trồng gì?",
+    "unlock_level": 1,
+    "relationship_max": 10
+  }
+]
