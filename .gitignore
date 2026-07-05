@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# Ảnh chụp/output tạm từ scripts/dev-check.cjs (xem README trong file đó)
+.dev-check-output/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
