@@ -65,8 +65,11 @@ export class PreloadScene extends Phaser.Scene {
     this.load.image('farm_soil_water_pot', '/assets/tilesets/farm/soil_water_pot.png')
 
     // Sprite cây trồng — đủ 19 cây trong crops.json (khớp `GameScene.PLANTABLE_CROP_IDS`), mỗi cây 4 giai đoạn
-    // (seed/sprout/growing/ready — ready dùng thẳng file gốc `<id>.png` không hậu tố). Không load `natures_essence`
-    // dù có sprite sẵn — nguyên liệu craft-only, không có trong crops.json/PLANTABLE_CROP_IDS.
+    // hiển thị trên map (seed/sprout/growing/harvest — harvest = cây chín còn trên đất, load riêng file
+    // `<id>_harvest.png`). Load thêm key `crop_<id>_item` từ `<id>.png` (item icon) — dùng cho hiệu ứng bay
+    // lên khi thu hoạch (xem GameScene.playHarvestFx()); Inventory UI thật (hiện icon trong túi đồ) vẫn để
+    // Sprint 4. Không load `natures_essence` dù có sprite sẵn — nguyên liệu craft-only, không có trong
+    // crops.json/PLANTABLE_CROP_IDS.
     // Key texture theo mẫu `crop_<id>_<stage>` để GameScene tra cứu động (xem FarmManager.getVisualStage()).
     const PLANTABLE_CROPS = [
       'green_onion',
@@ -93,12 +96,13 @@ export class PreloadScene extends Phaser.Scene {
       seed: '_seed',
       sprout: '_sprout',
       growing: '_growing',
-      ready: ''
+      harvest: '_harvest'
     }
     for (const cropId of PLANTABLE_CROPS) {
       for (const [stage, suffix] of Object.entries(CROP_STAGE_SUFFIX)) {
         this.load.image(`crop_${cropId}_${stage}`, `/assets/sprites/crops/${cropId}${suffix}.png`)
       }
+      this.load.image(`crop_${cropId}_item`, `/assets/sprites/crops/${cropId}.png`)
     }
 
     // Hàng rào gỗ bao quanh khu đất — xem vị trí đặt ở data/fencePlacements.ts.

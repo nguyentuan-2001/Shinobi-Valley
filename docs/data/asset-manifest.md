@@ -208,7 +208,15 @@ Boss cuối (`bosses/`, 128×128, 3 file riêng theo phase):
 
 ## 7. Cây trồng (`public/assets/sprites/crops/`)
 
-Nguồn: `art-refs/items/crops.md`. Mỗi cây **4 file theo 4 giai đoạn**: `<id>_seed.png` → `<id>_sprout.png` → `<id>_growing.png` → `<id>.png` (harvest — dùng luôn làm icon chính trong inventory, khớp `id` trong `crops.json`).
+Nguồn: `art-refs/items/crops.md`. Mỗi cây **5 file** — khớp đúng cách `FarmManager.getVisualStage()` + `PreloadScene.ts` đang load (`crop_<id>_seed/_sprout/_growing/_harvest`):
+
+| File | Ý nghĩa | Có đất/nước? |
+|---|---|---|
+| `<id>_seed.png` | Hạt giống mới trồng (0–33% `growth_hours`) | Có (mô đất) |
+| `<id>_sprout.png` | Nảy mầm (33–66%) | Có (cùng mô đất) |
+| `<id>_growing.png` | Đang lớn (66–100%) | Có (cùng mô đất) |
+| `<id>_harvest.png` | **Chín/Thu hoạch** — hiện trên ô đất khi đủ `growth_hours` (`_harvest`), cây vẫn gắn trên mô đất | Có (cùng mô đất) |
+| `<id>.png` | **Item icon** — hiển thị khi đã hái vào inventory/UI (chưa preload ở `PreloadScene.ts`, để dành Sprint 4), khớp `id` trong `crops.json` | Không |
 
 | Tier | id |
 |---|---|
@@ -217,12 +225,9 @@ Nguồn: `art-refs/items/crops.md`. Mỗi cây **4 file theo 4 giai đoạn**: `
 | Cao Cấp | `green_tea`, `ginseng`, `lotus`, `red_ginseng`, `medicinal_herb` |
 | Hiếm | `moonlight_flower`, `sunflower`, `spirit_energy_plant`, `ancient_seed`, `natures_essence` |
 
-**✅ Đã xong toàn bộ 4/4 giai đoạn cho 20/20 cây = 80 file** (`<id>_seed.png`, `<id>_sprout.png`, `<id>_growing.png`, `<id>.png`), cắt từ:
-- `basic.png` + `basic-1.png` (seed+harvest / sprout+growing) — Tier Cơ Bản
-- `intermediate.png` + `intermediate-1.png` — Tier Trung Cấp
-- `high.png` + `high-1.png` — Tier Cao Cấp + Hiếm
+**⚠️ Đã xong 4/5 file cho 20/20 cây = 80 file** (`seed/sprout/growing` + item icon `<id>.png`, cắt từ `basic/intermediate/high.png` + `-1`). **Còn thiếu `<id>_harvest.png` cho toàn bộ 20 cây** — giai đoạn Harvest mới tách riêng khỏi item icon (trước đây dùng chung 1 file `_ready`, nay đổi lại thành file riêng theo yêu cầu), prompt đã có sẵn trong `art-refs/items/crops.md`. Code (`FarmManager.ts`/`PreloadScene.ts`) đã trỏ sẵn tới `_harvest.png` — **cho tới khi gen xong, ô đất cây chín trên map sẽ hiện ảnh lỗi/thiếu**.
 
-V1 chỉ cần 14 cây đầu (Cơ Bản + Trung Cấp + Cao Cấp) nhưng tier Hiếm cũng đã có sẵn đủ 4 giai đoạn luôn, dùng được ngay khi làm V2.
+V1 chỉ cần 14 cây đầu (Cơ Bản + Trung Cấp + Cao Cấp) nhưng tier Hiếm cũng đã có sẵn đủ, dùng được ngay khi làm V2.
 
 ---
 

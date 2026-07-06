@@ -65,7 +65,7 @@ _(Roadmap: Movement, Inventory, Combat, Planting, Harvest, Save)_
 | Code  | `FarmTile` grid overlay lên tilemap (state: `empty/tilled/planted/ready/withered`), công cụ Cuốc (hoe) — tương tác đổi `empty→tilled`  |
 | Code  | Tương tác trồng hạt: `tilled + seed item → planted`, lưu `crop_id`, `planted_at_timestamp`                                             |
 | Data  | `crops.json` — 3 cây Tier Cơ Bản đầu (Hành lá, Cà rốt, Khoai tây — theo thứ tự trong `farming.md`)                                     |
-| Asset | **✅ Đủ 4/4 giai đoạn** cho 3 cây đầu đã có sẵn trong `sprites/crops/` (`<id>_seed/_sprout/_growing/.png`). Overlay đất đã cuốc (tilled soil) — **chưa có, cần gen** |
+| Asset | 3 cây đầu đã có `<id>_seed/_sprout/_growing.png` + `<id>.png` (item icon). **Còn thiếu `<id>_harvest.png`** (giai đoạn chín-còn-trên-đất, hiện trên map trước khi hái — tách riêng khỏi item icon) và overlay đất đã cuốc (tilled soil) — xem `asset-manifest.md` mục 7 |
 
 **Done when:** Cuốc đất → trồng hạt → cây hiển thị đúng giai đoạn theo thời gian thực trôi qua (test bằng cách tăng tốc thời gian debug).
 
@@ -135,7 +135,7 @@ _(Roadmap: 20→14 cây (theo v1-scope), 5 map, boss, NPC, quest, crafting)_
 | ----- | ------------------------------------------------------------------------------------------------------------- |
 | Code  | Hệ thống phân bón: item `fertilizer_applied` trên tile, ảnh hưởng tốc độ lớn/moisture decay theo `farming.md` |
 | Data  | Hoàn thiện `crops.json` — 11 cây còn lại (Tier Trung Cấp + Cao Cấp, tới Sâm đỏ)                               |
-| Asset | **✅ Đủ 4/4 giai đoạn** cho 11 cây còn lại đã có sẵn trong `sprites/crops/`. Còn thiếu icon 2-3 loại phân bón |
+| Asset | 11 cây còn lại đã có `<id>_seed/_sprout/_growing.png` + `<id>.png`. Còn thiếu `<id>_harvest.png` (như Sprint 2) và icon 2-3 loại phân bón |
 
 **Done when:** Toàn bộ 14 cây trồng được, lớn đúng thời gian riêng, phân bón có tác dụng đo được.
 

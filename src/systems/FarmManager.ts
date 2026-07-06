@@ -4,7 +4,7 @@ import { GameData } from '../data/DataLoader'
 
 /** Giai đoạn hiển thị của cây đang trồng — khác với `FarmTileState` (state chỉ có 'planted' xuyên suốt từ lúc
  * gieo tới lúc chín, còn giai đoạn hiển thị đổi dần theo % thời gian đã trôi qua so với `growth_hours`). */
-export type CropVisualStage = 'seed' | 'sprout' | 'growing' | 'ready'
+export type CropVisualStage = 'seed' | 'sprout' | 'growing' | 'harvest'
 
 export interface FarmTileRuntime {
   id: number
@@ -81,6 +81,18 @@ export class FarmManager {
     return true
   }
 
+  /** Thu hoạch: chỉ áp dụng được lên ô đang `ready`. Trả về `cropId` vừa thu hoạch (để GameScene biết dùng
+   * icon nào cho hiệu ứng bay lên) hoặc `null` nếu ô chưa chín. Ô đất trả về `empty` (chưa cuốc lại) — chưa
+   * cộng vào inventory/tính sản lượng theo `moisture` vì Inventory/vật phẩm thật thuộc scope Sprint 4. */
+  harvest(tile: FarmTileRuntime): string | null {
+    if (tile.state !== 'ready') return null
+    const cropId = tile.cropId
+    tile.state = 'empty'
+    tile.cropId = null
+    tile.plantedAt = null
+    return cropId
+  }
+
   /** Gọi mỗi frame (GameScene.update) — ô nào đã trồng đủ `growth_hours` thì chuyển sang `ready`. */
   update(now: number): void {
     for (const tile of this.tiles) {
@@ -94,7 +106,7 @@ export class FarmManager {
 
   /** Giai đoạn hiển thị hiện tại của cây trên 1 ô (null nếu ô không có cây gì để vẽ). */
   getVisualStage(tile: FarmTileRuntime): CropVisualStage | null {
-    if (tile.state === 'ready') return 'ready'
+    if (tile.state === 'ready') return 'harvest'
     if (tile.state !== 'planted' || tile.cropId === null || tile.plantedAt === null) return null
     const crop = GameData.crops.find((c) => c.id === tile.cropId)
     if (!crop) return null

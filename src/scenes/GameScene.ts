@@ -20,6 +20,11 @@ const SHADOW_TEXTURE = 'shadow_oval'
 const INTERACTION_POINTER_TEXTURE = 'interaction_pointer'
 /** Luôn vẽ trên cùng — con trỏ là chỉ dẫn UI gắn vào world, phải nổi trên mọi prop (nhà, hàng rào, cây...). */
 const INTERACTION_POINTER_DEPTH = 999_999
+/** Icon bay lên khi thu hoạch phải nổi TRÊN cả con trỏ tương tác — ô vừa hái vẫn còn trong bán kính tương tác
+ * (đất chưa cuốc lại), nên con trỏ tiếp tục hiện đúng ngay tại đó cùng lúc; nếu thấp hơn depth con trỏ, hình
+ * thoi vàng của con trỏ (22×26, gần kín trọn icon 24×24) sẽ che mất icon suốt lúc bay lên (bug thật gặp khi
+ * verify bằng Puppeteer — object tồn tại đúng vị trí/alpha nhưng không thấy gì trong screenshot). */
+const HARVEST_FX_DEPTH = INTERACTION_POINTER_DEPTH + 0.5
 /** Menu chọn hạt giống phải nổi trên cả con trỏ tương tác. */
 const SEED_MENU_DEPTH = 1_000_000
 const BACKGROUND_KEY = 'farm_background'
@@ -351,8 +356,8 @@ export class GameScene extends Phaser.Scene {
   /** Enter bấm khi menu đang mở = xác nhận hạt đang chọn rồi trồng. Enter bấm khi KHÔNG có menu = tìm ô đất
    * GẦN NHẤT trong bán kính `FARM_TILE_INTERACT_RADIUS` (cùng điểm chân player dùng cho va chạm polygon:
    * `body.center.x`, `body.bottom` — và cùng bán kính dùng cho con trỏ báo, nên "thấy trỏ" luôn đi kèm "bấm
-   * được") rồi cuốc đất (`empty`) hoặc mở menu chọn hạt (`tilled`, dù vừa cuốc xong hay đã cuốc sẵn từ trước
-   * đều xử lý như nhau) — không làm gì nếu không có ô nào đủ gần, hoặc ô đã qua cả 2 mốc đó (`planted`/`ready`). */
+   * được") rồi cuốc đất (`empty`), mở menu chọn hạt (`tilled`), hoặc thu hoạch (`ready`) — không làm gì nếu
+   * không có ô nào đủ gần, hoặc ô còn `planted` (chưa chín). */
   private interactWithFarmTile() {
     if (this.seedMenuOpen) {
       this.confirmSeedMenu()
@@ -371,7 +376,28 @@ export class GameScene extends Phaser.Scene {
       this.farmManager.till(tile)
     } else if (tile.state === 'tilled') {
       this.openSeedMenu(tile)
+    } else if (tile.state === 'ready') {
+      const cropId = this.farmManager.harvest(tile)
+      if (cropId) this.playHarvestFx(cropId, tile.x, tile.y)
     }
+  }
+
+  /** Hiệu ứng thu hoạch: icon vật phẩm (item icon, khác sprite `harvest` còn trên đất) hiện tại đúng vị trí ô
+   * vừa hái, bay lên 1 đoạn ngắn rồi mờ dần và biến mất — chỉ là phản hồi hình ảnh tức thời, CHƯA cộng vào
+   * inventory thật (Inventory là việc của Sprint 4, hiện chưa tồn tại để cộng vào). */
+  private playHarvestFx(cropId: string, x: number, y: number) {
+    const icon = this.add
+      .image(x, y, this.cropItemTextureKey(cropId))
+      .setDisplaySize(24, 24)
+      .setDepth(HARVEST_FX_DEPTH)
+    this.tweens.add({
+      targets: icon,
+      y: y - 40,
+      alpha: 0,
+      duration: 600,
+      ease: 'Cubic.easeOut',
+      onComplete: () => icon.destroy()
+    })
   }
 
   /** Mở menu chọn hạt giống lên 1 ô đã cuốc — nhớ lại ô mục tiêu (`seedMenuTargetTileId`) để `confirmSeedMenu()`
@@ -590,6 +616,12 @@ export class GameScene extends Phaser.Scene {
 
   private cropTextureKey(cropId: string, stage: CropVisualStage): string {
     return `crop_${cropId}_${stage}`
+  }
+
+  /** Texture item icon (`<id>.png`, khác các stage hiển thị trên map) — dùng cho hiệu ứng bay lên khi thu
+   * hoạch, xem `playHarvestFx()`. */
+  private cropItemTextureKey(cropId: string): string {
+    return `crop_${cropId}_item`
   }
 
   /** Đặt hàng rào gỗ bao quanh khu đất (4 trụ góc + 2 đoạn ngang trên/dưới + 2 đoạn dọc trái/phải), toạ độ tính
