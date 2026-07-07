@@ -109,9 +109,10 @@ export class GameScene extends Phaser.Scene {
   private seedMenuArrowLeft!: Phaser.GameObjects.Text
   private seedMenuArrowRight!: Phaser.GameObjects.Text
   /** Kích thước icon cố định (px) — phải áp lại bằng `setDisplaySize()` mỗi lần `setTexture()` đổi icon sang
-   * cây khác, vì các ảnh `crop_<id>_ready` có kích thước GỐC khác hẳn nhau giữa các cây (không đồng bộ), đổi
-   * texture không tự giữ nguyên display size cũ — quên bước này khiến icon to nhỏ lộn xộn, có cây gần như biến
-   * mất (bug thật đã gặp khi test menu với đủ 19 cây thay vì chỉ 3 cây cùng cỡ như trước). */
+   * cây khác, vì các ảnh `crop_<id>_item` có thể có kích thước GỐC khác nhau giữa các cây (vd carrot.png vẫn
+   * còn giữ kích thước cũ, chưa chuẩn hoá 200x200 như 18 cây còn lại — xem progress.md), đổi texture không tự
+   * giữ nguyên display size cũ — quên bước này khiến icon to nhỏ lộn xộn, có cây gần như biến mất (bug thật đã
+   * gặp khi test menu với đủ 19 cây thay vì chỉ 3 cây cùng cỡ như trước). */
   private seedMenuIconSize = 32
   /** Kích thước bảng thật (tính động theo số hạt, xem `createSeedMenu()`) — cần lưu lại để so bằng con trỏ
    * chuột lúc click ra ngoài đóng menu, xem `isPointerInsideSeedMenu()`. */
@@ -474,7 +475,7 @@ export class GameScene extends Phaser.Scene {
         return
       }
       icon
-        .setTexture(`crop_${PLANTABLE_CROP_IDS[cropIndex]}_ready`)
+        .setTexture(this.cropItemTextureKey(PLANTABLE_CROP_IDS[cropIndex]))
         .setDisplaySize(this.seedMenuIconSize, this.seedMenuIconSize)
         .setVisible(true)
       if (cropIndex === this.seedMenuIndex) this.seedMenuHighlight.setPosition(icon.x, icon.y)
@@ -486,7 +487,8 @@ export class GameScene extends Phaser.Scene {
 
   /** Tạo sẵn 1 lần UI menu chọn hạt (ẩn ban đầu) — cố định theo camera (`setScrollFactor(0)`) ở giữa-dưới màn
    * hình, kiểu bảng tròn góc xanh ngọc + viền sáng giống ảnh tham khảo user gửi. Icon dùng thẳng texture
-   * `crop_<id>_ready` đã preload sẵn từ Sprint 2, không cần vẽ/asset riêng cho menu. Chỉ tạo đúng
+   * `crop_<id>_item` (icon vật phẩm cô lập, đã preload sẵn — xem `cropItemTextureKey()`), không cần vẽ/asset
+   * riêng cho menu. Chỉ tạo đúng
    * `SEED_MENU_VISIBLE_SLOTS` icon (không phải 1 icon/cây trong toàn bộ 19 cây) — texture của từng icon đổi
    * động theo cửa sổ đang trượt tới, xem `updateSeedMenuSelection()`. */
   private createSeedMenu() {
@@ -528,7 +530,7 @@ export class GameScene extends Phaser.Scene {
     const startX = -totalIconsWidth / 2 + iconSize / 2
     this.seedMenuIcons = Array.from({ length: SEED_MENU_VISIBLE_SLOTS }, (_, slot) =>
       this.add
-        .image(startX + slot * (iconSize + gap), 0, `crop_${PLANTABLE_CROP_IDS[0]}_ready`)
+        .image(startX + slot * (iconSize + gap), 0, this.cropItemTextureKey(PLANTABLE_CROP_IDS[0]))
         .setDisplaySize(iconSize, iconSize)
     )
 
@@ -601,7 +603,7 @@ export class GameScene extends Phaser.Scene {
             tile.id,
             this.add
               .image(tile.x, tile.y, textureKey)
-              .setDisplaySize(tile.width * 0.85, tile.height * 0.85)
+              .setDisplaySize(tile.width * 1.2, tile.height * 1.2)
               .setDepth(CROP_DEPTH)
           )
         } else if (cropImage.texture.key !== textureKey) {
