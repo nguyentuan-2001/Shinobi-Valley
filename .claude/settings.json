@@ -40,7 +40,9 @@
       "Bash(node /tmp/checkdominput.cjs)",
       "Bash(powershell -Command \"Stop-Process -Id 30660,12844,31844,31800 -Force\")",
       "Bash(grep -iE \"\\\\.env|\\\\.key$|\\\\.pem$|credential|token|secret\")",
-      "Bash(git commit -m ' *)"
+      "Bash(git commit -m ' *)",
+      "Bash(xargs ls -la)",
+      "Bash(xargs -n1 basename)"
     ]
   }
 }
