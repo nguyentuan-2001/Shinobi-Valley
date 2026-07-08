@@ -270,6 +270,22 @@ export interface AnimalState {
   last_product_timestamp: number
 }
 
+/** Chỉ số chiến đấu runtime của người chơi — Sprint 5. `weapon_id` là vũ khí đang cầm (chưa có hệ thống
+ * trang bị/inventory vũ khí thật nên tạm cố định 1 giá trị, đổi tay khi Sprint 11 làm hệ đổi class tại nhà). */
+export interface PlayerStats {
+  level: number
+  exp: number
+  exp_to_next: number
+  hp: number
+  max_hp: number
+  mp: number
+  max_mp: number
+  atk: number
+  def: number
+  gold: number
+  weapon_id: string
+}
+
 export interface SaveState {
   player_id: string
   gender: Gender
@@ -277,4 +293,5 @@ export interface SaveState {
   animals: AnimalState[]
   buildings_built: string[]
   farm_decorations: unknown[]
+  player_stats: PlayerStats
 }

@@ -9,7 +9,20 @@ export function createDefaultSaveState(): SaveState {
     farm_tiles: [],
     animals: [],
     buildings_built: [],
-    farm_decorations: []
+    farm_decorations: [],
+    player_stats: {
+      level: 1,
+      exp: 0,
+      exp_to_next: 100,
+      hp: 500,
+      max_hp: 500,
+      mp: 200,
+      max_mp: 200,
+      atk: 10,
+      def: 5,
+      gold: 0,
+      weapon_id: 'iron_sword'
+    }
   }
 }
 

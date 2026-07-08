@@ -11,7 +11,9 @@ export interface InventorySlot {
 const DEFAULT_STACK_MAX = 99
 
 /** Quản lý túi đồ của người chơi — cấu trúc dạng danh sách ô (không giới hạn số ô ở V1, UI tự cuộn/hiện theo
- * lưới cố định, xem `GameScene`). Tách biệt khỏi rendering, giống triết lý `FarmManager`. */
+ * lưới cố định, xem `GameScene`). Tách biệt khỏi rendering, giống triết lý `FarmManager`. Sprint 5: túi đồ phải
+ * là 1 instance DUY NHẤT dùng chung mọi scene (giống `CombatManager`) — quái ở `GrasslandScene` rớt đồ phải
+ * cộng vào ĐÚNG túi đồ đang dùng ở Farm, không phải 1 túi rỗng mới tạo riêng cho scene đó. */
 export class InventoryManager {
   private readonly slots: InventorySlot[] = []
 
@@ -50,3 +52,6 @@ export class InventoryManager {
     }
   }
 }
+
+/** Instance DUY NHẤT dùng chung mọi scene — xem docstring class phía trên. */
+export const inventoryManager = new InventoryManager()
