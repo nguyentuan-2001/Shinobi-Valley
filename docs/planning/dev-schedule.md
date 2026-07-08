@@ -94,20 +94,24 @@ _(Roadmap: Movement, Inventory, Combat, Planting, Harvest, Save)_
 
 **Done when:** Trồng → tưới đều → thu hoạch cho sản lượng cao hơn không tưới; item thu hoạch vào đúng inventory, stack đúng số lượng.
 
-### Sprint 5: Combat cơ bản — 1 hệ vũ khí, quái, HP/damage thật
+### Sprint 5: Combat cơ bản — Bãi Tập Luyện, 1 hệ vũ khí, quái, HP/damage thật
+
+**Thứ tự làm trong sprint:** dựng Bãi Tập Luyện + hệ thống chuyển màn trước (nền tảng, dùng lại được cho mọi map sau), rồi mới làm Monster/damage thật ở Map 2 — Đồng Cỏ. Case chi tiết đã chốt ở `docs/gameplay/combat.md` mục "Case xử lý khi chiến đấu" + `docs/gameplay/mechanics.md` mục "Người Rơm"/"Hệ thống Chuyển Màn".
 
 **Size: L**
 
 | Loại  | Việc cần làm                                                                                                                                                                            |
 | ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Code  | Hệ thống chuyển màn đầu tiên (Exit Zone/Entry Point/fade, xem `mechanics.md`) — áp dụng Farm ↔ Bãi Tập Luyện trước, generic để dùng lại cho Village/Map 2-7 sau |
+| Code  | `TrainingDummy` entity (đọc vị trí từ `src/data/trainingDummyPlacement.ts`) — đếm hit riêng (không dùng công thức damage), chết ở đúng 5 hit, respawn 15s, không EXP/gold/drop |
 | Code  | `Weapon` component (đang cầm), đòn đánh thường (hitbox melee, cooldown ngắn)                                                                                                            |
 | Code  | `Monster` entity base (HP/ATK/DEF, di chuyển AI đơn giản — patrol/chase), công thức damage `ATK × multiplier × 100/(100+DEF)`, crit ×1.5, dmg tối thiểu 1                               |
 | Code  | Chết/respawn: quái chết→despawn+drop, player chết→mất 10% Đồng rơi ra (despawn 5 phút), respawn 50% HP/MP tại làng                                                                      |
 | Code  | Nối `UIScene` HP/MP/EXP vào state thật của player (bỏ số giả)                                                                                                                           |
-| Data  | `weapons.json` (1 vũ khí: Kiếm sắt), `monsters.json` (1-2 quái Đồng Cỏ: Thỏ hoang...), `skills.json` (skill 1: Chém nhanh)                                                              |
-| Asset | Animation đánh cho player (thêm state `attack` vào sprite sheet), sprite 1-2 quái (32×32, theo `art-refs/enemies/monsters.md`), hiệu ứng chém cơ bản (theo `art-refs/combat/skills.md`) |
+| Data  | `src/data/trainingDummyPlacement.ts` (5 vị trí Người Rơm), `weapons.json` (1 vũ khí: Kiếm sắt), `monsters.json` (1-2 quái Đồng Cỏ: Thỏ hoang...), `skills.json` (skill 1: Chém nhanh) |
+| Asset | Sprite Người Rơm (32×32, có hiệu ứng vỡ khi chết), animation đánh cho player (thêm state `attack` vào sprite sheet), sprite 1-2 quái (32×32, theo `art-refs/enemies/monsters.md`), hiệu ứng chém cơ bản (theo `art-refs/combat/skills.md`) |
 
-**Done when:** Đánh chết quái nhận EXP/gold/drop đúng bảng; player chết thì respawn đúng vị trí/HP, rơi đúng % Đồng.
+**Done when:** Đi từ Farm sang Bãi Tập Luyện và ngược lại qua Exit Zone; đánh Người Rơm đúng 5 hit thì chết bất kể ATK cao/thấp, sau 15s tự hồi sinh đúng vị trí; đánh chết quái thật ở Đồng Cỏ nhận EXP/gold/drop đúng bảng; player chết thì respawn đúng vị trí/HP, rơi đúng % Đồng.
 
 ### Sprint 6: Save/Load hoàn chỉnh — chốt Alpha
 
@@ -179,13 +183,13 @@ _(Roadmap: 20→14 cây (theo v1-scope), 5 map, boss, NPC, quest, crafting)_
 
 **Size: L**
 
-| Loại  | Việc cần làm                                                                                                                                                                  |
-| ----- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Code  | `Skill` component (cooldown, mp cost, damage multiplier, effect), status effect system (poison/bleed/slow/stun/burn/def_down — refresh không stack), đổi vũ khí/class tại nhà |
-| Data  | Hoàn thiện `weapons.json` (5 hệ), `skills.json` (6 skill/hệ cho V1 = 30 skill)                                                                                                |
-| Asset | 4 sprite sheet class còn lại (Song kiếm/Thương/Cung/Ninja) + animation đánh riêng, 30 icon skill + hiệu ứng, theo `art-refs/combat/weapons.md` + `art-refs/combat/skills.md`  |
+| Loại  | Việc cần làm                                                                                                                                                                                                                    |
+| ----- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Code  | `Skill` component cho chiêu Active (cooldown, mp cost, damage multiplier, effect) + hệ thống áp dụng Passive (đọc `passive_stat`/`passive_condition`/`proc_chance`, tự có hiệu lực theo hệ vũ khí đang cầm, mất khi đổi hệ khác — xem `docs/gameplay/combat.md`), status effect system (poison/bleed/slow/stun/burn/def_down — refresh không stack), đổi vũ khí/class tại nhà |
+| Data  | Hoàn thiện `weapons.json` (5 hệ), `skills.json` đủ **10 skill/hệ = 50 skill** (6 Active + 4 Passive mỗi hệ, xem bảng chi tiết ở `docs/gameplay/combat.md`)                                                                        |
+| Asset | 4 sprite sheet class còn lại (Song kiếm/Thương/Cung/Ninja) + animation đánh riêng, 50 icon skill (30 Active-style + 20 Passive-style badge) + hiệu ứng, theo `art-refs/combat/weapons.md` + `art-refs/combat/skills.md`           |
 
-**Done when:** Đổi được cả 5 hệ vũ khí, dùng đủ 6 skill/hệ, status effect áp dụng và refresh đúng (không cộng dồn).
+**Done when:** Đổi được cả 5 hệ vũ khí, dùng đủ 10 skill/hệ (6 Active + 4 Passive tự động có hiệu lực đúng điều kiện), status effect áp dụng và refresh đúng (không cộng dồn).
 
 ### Sprint 12: Map 2-7 (Đồng Cỏ→Rừng Cổ) + cơ chế riêng từng map
 

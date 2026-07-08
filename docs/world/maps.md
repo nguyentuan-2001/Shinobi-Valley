@@ -1,6 +1,6 @@
 # Bản đồ
 
-Shinobi Valley bao gồm 2 bản đồ phi chiến đấu (Hub + Nông Trại) + 6 bản đồ chiến đấu + 1 đấu trường Boss cuối.
+Shinobi Valley bao gồm 2 bản đồ phi chiến đấu (Hub + Nông Trại) + 6 bản đồ chiến đấu + 1 đấu trường Boss cuối + 1 khu vực phụ (Bãi Tập Luyện, không tính vào 9 map chính 0-8).
 
 ---
 
@@ -29,6 +29,20 @@ Shinobi Valley bao gồm 2 bản đồ phi chiến đấu (Hub + Nông Trại) +
   - Chuồng Gia Súc (animal pens) — nuôi gà, bò, cừu
   - Khe Nhà Kính (greenhouse slot) — mở khóa khi nâng cấp Nông Trại
 - **Không có kẻ thù.** Nhạc nền bình yên, tiếng chim hót và gió nhẹ
+
+---
+
+## Bãi Tập Luyện (khu vực phụ, nối liền Map 1 — Nông Trại)
+
+**Không phải 1 trong 9 map chính (0-8)** — không tính vào lore/level-gate, không ảnh hưởng bảng "Tham chiếu nhanh" ở cuối file. Chỉ là màn nhỏ dạy chiến đấu cơ bản trước khi vào Map 2 — Đồng Cỏ.
+
+- **Mở khóa:** Lv 1, có sẵn từ đầu game, không cần điều kiện gì
+- **Vị trí:** ngay cạnh Map 1 — Nông Trại, đi ra khỏi ranh giới khu đất trồng là tới (1 **Exit Zone** ở rìa Farm dẫn sang, xem `docs/gameplay/mechanics.md` mục "Hệ thống Chuyển Màn") — **map riêng biệt đầu tiên trong game cần cơ chế chuyển màn** (trước đó chỉ có 1 scene Farm duy nhất)
+- **Kích thước:** nhỏ, ~20×15 ô — chỉ đủ chỗ đi lại quanh 5 Người Rơm, không cần rộng như Farm (không trồng trọt gì ở đây)
+- **Nội dung:** 5 **Người Rơm** (Training Dummy) đứng cố định rải đều trong khu vực — xem cơ chế đầy đủ ở `docs/gameplay/mechanics.md` mục "Người Rơm (Training Dummy)" và case chiến đấu ở `docs/gameplay/combat.md`. Không có kẻ địch thật nào khác, không có NPC.
+- **Vị trí đặt Người Rơm:** định nghĩa qua file riêng `src/data/trainingDummyPlacement.ts` (đúng pattern `wellPlacement.ts`/`farmTiles.ts`/`fencePlacements.ts` đã dùng trong dự án — toạ độ cố định gắn với 1 map cụ thể thì để trong `src/data/`, không phải nội dung game-design chung nên KHÔNG thêm vào `monsters.json`)
+- **Không có chức năng gì khác** — không shop, không quest, không tài nguyên farm được. Thuần tập đòn tay trước khi vào combat thật.
+- **Nhạc nền:** dùng lại nhạc Nông Trại (không cần track riêng)
 
 ---
 
@@ -134,3 +148,5 @@ Shinobi Valley bao gồm 2 bản đồ phi chiến đấu (Hub + Nông Trại) +
 | 6   | Rừng Thiêng   | Lv 40           | 40–55      | Ô nhiễm + Purify scroll   |
 | 7   | Rừng Cổ       | Lv 50           | 52–68      | Rơi chìa khóa Boss        |
 | 8   | Thánh Điện Cổ | Lv 70 + MQ-09   | Boss Lv 75 | Kết thúc game             |
+
+> **Bãi Tập Luyện** (5 Người Rơm, nối liền Map 1) không nằm trong bảng này — không phải map chính, không có level-gate, xem mục riêng phía trên.

@@ -203,6 +203,28 @@ Một số ô đất trong Rừng Thiêng bị nhiễm Ma Khí nặng — bướ
 - **Cấp độ cố định:** kẻ địch có cấp cố định theo khu vực, không tự điều chỉnh theo cấp người chơi
 - **Trùm (Boss):** không hồi sinh sau khi chết, ngoại trừ trùm sự kiện theo lịch
 
+### Người Rơm (Training Dummy) — ngoại lệ, không phải kẻ địch thật
+
+Đứng ở Bãi Tập Luyện (xem `docs/world/maps.md`), dùng cơ chế **hoàn toàn khác** mọi kẻ địch thật ở trên — không dùng `monsters.json`, không có HP/ATK/DEF:
+
+- **Không phát hiện/aggro** — đứng yên tuyệt đối, không bao giờ tự tấn công người chơi, không có tầm phát hiện.
+- **Không dùng công thức damage** (`ATK × multiplier × 100/(100+DEF)`) — chỉ **đếm số lần bị trúng đòn** (mỗi `hit` tính riêng theo `skills.json.hits`, không tính theo số lần bấm chiêu). Đủ **5 lần trúng** → "chết" (despawn + hiệu ứng rơm vỡ tung), bất kể ATK người chơi cao hay thấp.
+- **Hồi sinh sau đúng 15 giây thực** (không phải 5 phút như kẻ địch thường) — respawn lại đúng vị trí ban đầu, reset về 0 lần trúng.
+- **Không rớt EXP/gold/drop**, không tính vào bất kỳ kill-count của quest/achievement nào.
+- Đã chết (đang trong 15s chờ respawn) thì không có hitbox — chiêu AOE/piercing lan tới vị trí cũ không tính gì.
+- 1 chiêu trúng nhiều Người Rơm cùng lúc (AOE) → mỗi Người Rơm đếm độc lập, không dùng chung 1 bộ đếm.
+
+---
+
+## Hệ thống Chuyển Màn (Map Transition)
+
+Lần đầu cần tới ở Bãi Tập Luyện (map phụ đầu tiên nối với Map 1 — Nông Trại, xem `docs/world/maps.md`) — dùng lại được cho mọi lần chuyển map sau này (Village, Map 2-7):
+
+- Mỗi map định nghĩa 1 hoặc nhiều **Exit Zone** (vùng hình chữ nhật/polygon ở rìa bản đồ, giống pattern `collisionZones.ts` đã có) — khi player entity chạm vùng này, kích hoạt chuyển màn.
+- Chuyển màn: fade-out màn hình (khoảng 300-500ms) → dừng scene/tải background + collision của map đích → đặt player tại **Entry Point** tương ứng của map đích (toạ độ cố định, không phải toạ độ Exit Zone vừa rời) → fade-in.
+- Mỗi Exit Zone biết trước map đích + Entry Point tương ứng (định nghĩa 2 chiều — Exit Zone ở Farm dẫn tới Entry Point ở Bãi Tập Luyện, và ngược lại).
+- Trong lúc fade (cả fade-out và fade-in) khóa input di chuyển/tấn công của người chơi, giống cách khóa input khi menu hạt giống/túi đồ/bảng công cụ nông trại đang mở (đã có sẵn pattern này ở `GameScene.update()`).
+
 ---
 
 ## Quy tắc Hiệu ứng Trạng thái

@@ -129,6 +129,8 @@ Game sử dụng kiến trúc **Data Driven** — toàn bộ nội dung nằm tr
 
 ## skills.json
 
+Record mẫu 1 chiêu **Active** (cũng dùng chung cho `buff`/`debuff`/`ultimate` — 4 loại này đều cần người chơi bấm để kích hoạt, tốn MP + có cooldown riêng, xem `docs/gameplay/combat.md` mục "Chủ động vs Bị động"):
+
 ```json
 {
   "id": "quick_slash",
@@ -145,12 +147,52 @@ Game sử dụng kiến trúc **Data Driven** — toàn bộ nội dung nằm tr
   "aoe_radius": 0,
   "effect": null,
   "effect_duration": 0,
-  "type": "active"
+  "type": "active",
+  "passive_stat": null,
+  "passive_value": 0,
+  "passive_condition": null,
+  "proc_chance": 0
 }
 ```
 
 **type enum:** `active / buff / debuff / passive / ultimate`
 **effect enum:** `poison / bleed / slow / stun / burn / def_down / atk_up / null`
+
+Record mẫu 1 chiêu **Passive** — `mp_cost`/`cooldown` luôn = 0 (không áp dụng), `damage_multiplier`/`hits`/`range`/`aoe`/`aoe_radius` giữ giá trị mặc định (1/1/`melee`/`false`/0, không dùng tới) vì passive không phải chiêu "tung ra":
+
+```json
+{
+  "id": "kiem_tam_bat_diet",
+  "name": "Kiếm Tâm Bất Diệt",
+  "class": "swordsman",
+  "skill_index": 7,
+  "unlock_level": 60,
+  "mp_cost": 0,
+  "cooldown": 0,
+  "damage_multiplier": 1,
+  "hits": 1,
+  "range": "melee",
+  "aoe": false,
+  "aoe_radius": 0,
+  "effect": null,
+  "effect_duration": 0,
+  "type": "passive",
+  "passive_stat": "cooldown_reduction_percent",
+  "passive_value": 15,
+  "passive_condition": "always",
+  "proc_chance": 0
+}
+```
+
+**passive_stat enum** (thuộc tính được cộng thẳng khi có hiệu lực, `null` nếu chiêu chỉ proc hiệu ứng qua `effect` mà không cộng stat):
+`def_percent / atk_percent / hp_flat / move_speed_percent / attack_speed_percent / evasion_percent / crit_chance_percent / range_percent / cooldown_reduction_percent / knockback_resist_percent / bonus_damage_percent / null`
+
+**passive_condition enum** (điều kiện để `passive_stat`/`proc_chance` có hiệu lực — `always` nghĩa là cộng thẳng vô điều kiện suốt lúc cầm vũ khí hệ đó):
+`always / on_combo_hit_3 / on_low_hp_below_50 / on_low_hp_below_30 / on_standing_still_1s / on_kiting / on_crit / on_target_debuffed / every_10_hits / null`
+
+**proc_chance:** số 0-1, tỉ lệ % mỗi lần điều kiện ở `passive_condition` xảy ra thì áp `effect`/`effect_duration` (dùng lại 2 field đã có của chiêu Active) hoặc cộng thêm 1 hit sát thương — `0` nếu passive chỉ cộng thẳng `passive_stat` không có yếu tố ngẫu nhiên.
+
+**Nguyên tắc chung của Passive** (xem đầy đủ ở `docs/gameplay/combat.md`): không tốn MP, không cooldown, tự động có hiệu lực ngay khi đủ `unlock_level` VÀ đang cầm đúng vũ khí hệ đó — đổi hệ vũ khí khác thì mất hiệu lực ngay, không cần "kích hoạt" thủ công.
 
 ---
 

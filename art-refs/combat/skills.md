@@ -8,6 +8,11 @@ Mỗi chiêu thức có 2 prompt:
 Style icon: `2D pixel art, 32x32 skill icon, clean outlines, vibrant colors, white background`
 Style effect: `2D pixel art, skill visual effect animation frame, dynamic action, glowing particles, transparent background`
 
+Riêng 4 chiêu **Passive** mỗi hệ (luôn ở chiêu #3/#5/#7/#9, xem `docs/gameplay/combat.md`) không có khoảnh khắc "tung chiêu" — Icon dùng phong cách khung huy hiệu tĩnh (badge/emblem) để phân biệt trực quan với Active trong hotbar, Effect chỉ là 1 hào quang/aura nhẹ lặp liên tục (ambient loop) quanh nhân vật, không phải hiệu ứng bùng nổ 1 lần:
+
+Style icon Passive: `2D pixel art, 32x32 skill icon, circular badge/emblem frame with ornate border (different border style from Active icons), muted steady glow, no motion blur, static passive skill icon, transparent background`
+Style effect Passive: `2D pixel art, subtle ambient aura loop around character silhouette, low-intensity constant glow (not a burst), transparent background`
+
 ---
 
 # HỆ KIẾM SĨ (Sword)
@@ -46,18 +51,18 @@ Style effect: `2D pixel art, skill visual effect animation frame, dynamic action
 
 ---
 
-### 3. Kiếm Khí — Lv20
+### 3. Thiết Cốt Kiếm Tâm — Lv20 (Passive)
 
 - **Icon:**
 
 ```
-2D pixel art, 32x32 skill icon, blue sword energy projectile, elongated crescent blade of pure blue-white ki energy, glowing, transparent background
+2D pixel art, 32x32 skill icon, circular badge frame, faint silver armor-plate pattern etched over a sword silhouette, steady grey-blue steady glow indicating defense, static passive skill icon, transparent background
 ```
 
 - **Effect:**
 
 ```
-2D pixel art, 128x32 skill effect, horizontal sword ki projectile, bright blue-white energy blade flying forward, sharp leading edge, energy particles trailing behind, glowing core, transparent background
+2D pixel art, subtle ambient aura loop, thin translucent silver-grey armor-like shimmer coating character silhouette, low-intensity constant glow, no burst, transparent background
 ```
 
 ---
@@ -78,18 +83,18 @@ Style effect: `2D pixel art, skill visual effect animation frame, dynamic action
 
 ---
 
-### 5. Tam Liên Chém — Lv40
+### 5. Trọng Kiếm Tích Lực — Lv40 (Passive)
 
 - **Icon:**
 
 ```
-2D pixel art, 32x32 skill icon, three overlapping slash marks in different angles, silver-white triple slash symbol, 1-2-3 indicator, transparent background
+2D pixel art, 32x32 skill icon, circular badge frame, sword silhouette with a small "3" numeral marker and building-up energy lines converging into the blade, static passive skill icon, transparent background
 ```
 
 - **Effect:**
 
 ```
-2D pixel art, 96x96 skill effect, three rapid consecutive slash arcs, first slash white, second blue-white, third bright gold, all overlapping in slightly different angles, combo hit visual, transparent background
+2D pixel art, subtle ambient effect, faint energy building up along blade edge every third swing implied by pulsing outline, low-intensity glow, transparent background
 ```
 
 ---
@@ -110,18 +115,18 @@ Style effect: `2D pixel art, skill visual effect animation frame, dynamic action
 
 ---
 
-### 7. Bão Kiếm — Lv60
+### 7. Kiếm Tâm Bất Diệt — Lv60 (Passive)
 
 - **Icon:**
 
 ```
-2D pixel art, 32x32 skill icon, tornado of sword slashes, many small blade shapes spiraling in a wind funnel, blue-white storm energy, AOE storm skill icon, transparent background
+2D pixel art, 32x32 skill icon, circular badge frame, sword silhouette with a small clock/hourglass symbol overlaid ticking faster, cyan accent indicating cooldown reduction, static passive skill icon, transparent background
 ```
 
 - **Effect:**
 
 ```
-2D pixel art, 128x128 skill effect, sword storm AOE explosion, large spinning vortex of silver blade slashes, white-blue wind energy swirling, debris and energy particles, massive impact area, transparent background
+2D pixel art, subtle ambient effect, faint cyan clock-hand shimmer rotating slowly around the weapon, low-intensity constant glow, transparent background
 ```
 
 ---
@@ -142,18 +147,18 @@ Style effect: `2D pixel art, skill visual effect animation frame, dynamic action
 
 ---
 
-### 9. Thiên Sát Kiếm — Lv80
+### 9. Sát Ý Kiếm Khách — Lv80 (Passive)
 
 - **Icon:**
 
 ```
-2D pixel art, 32x32 skill icon, sword raised above with downward lightning bolt, dramatic aerial slam symbol, white-gold power strike, transparent background
+2D pixel art, 32x32 skill icon, circular badge frame, sword silhouette with a small crimson crosshair/star mark near the tip indicating critical proc, dark red accent, static passive skill icon, transparent background
 ```
 
 - **Effect:**
 
 ```
-2D pixel art, 128x128 skill effect, massive aerial sword slam impact, huge white-gold explosion on ground contact, shockwave ring expanding outward, crater cracks in ground, intense light burst at center, transparent background
+2D pixel art, subtle ambient effect, faint crimson glint flashing briefly along blade edge on critical hits only, otherwise dormant, low-intensity, transparent background
 ```
 
 ---
@@ -210,18 +215,18 @@ Style effect: `2D pixel art, skill visual effect animation frame, dynamic action
 
 ---
 
-### 3. Xoáy Lốc — Lv20
+### 3. Thân Pháp Khinh Vũ — Lv20 (Passive)
 
 - **Icon:**
 
 ```
-2D pixel art, 32x32 skill icon, dual blades spinning in a tornado shape, blue-white wind vortex with two blade shapes visible, AOE spin skill, transparent background
+2D pixel art, 32x32 skill icon, circular badge frame, light feather/wind swirl behind a dual-sword silhouette, pale teal accent indicating evasion, static passive skill icon, transparent background
 ```
 
 - **Effect:**
 
 ```
-2D pixel art, 96x96 skill effect, dual sword spinning tornado, twin blades visible in fast circular spin, blue-white wind energy swirling around, ground particles kicked up, AOE spin attack visual, transparent background
+2D pixel art, subtle ambient effect, faint teal wind wisp trailing behind character's footsteps, low-intensity constant glow, transparent background
 ```
 
 ---
@@ -242,18 +247,18 @@ Style effect: `2D pixel art, skill visual effect animation frame, dynamic action
 
 ---
 
-### 5. Vũ Điệu Lưỡi Dao — Lv40
+### 5. Song Đao Cuồng Loạn — Lv40 (Passive)
 
 - **Icon:**
 
 ```
-2D pixel art, 32x32 skill icon, flowing dance-like dual blade trails, elegant curved motion lines forming flower pattern, blue-silver flowing movement, mobile dance skill, transparent background
+2D pixel art, 32x32 skill icon, circular badge frame, two crossed dagger silhouettes with a small "+1" combo marker, orange-red accent indicating bonus combo hit, static passive skill icon, transparent background
 ```
 
 - **Effect:**
 
 ```
-2D pixel art, 128x128 skill effect, blade dance movement path, character motion trail moving through multiple directions, silver slash arcs at each position, flowing blue-white energy ribbon trail, graceful but deadly, transparent background
+2D pixel art, subtle ambient effect, faint orange-red spark flickering at blade tips at the end of an attack chain, low-intensity, transparent background
 ```
 
 ---
@@ -274,18 +279,18 @@ Style effect: `2D pixel art, skill visual effect animation frame, dynamic action
 
 ---
 
-### 7. Bão Song Kiếm — Lv60
+### 7. Tốc Kiếm Liên Hoàn — Lv60 (Passive)
 
 - **Icon:**
 
 ```
-2D pixel art, 32x32 skill icon, dual sword storm, two blade shapes in a larger version of the tornado icon, silver and blue storm, bigger AOE than single sword storm, transparent background
+2D pixel art, 32x32 skill icon, circular badge frame, two blade silhouettes with speed lines and a small lightning-bolt accent, yellow accent indicating attack speed, static passive skill icon, transparent background
 ```
 
 - **Effect:**
 
 ```
-2D pixel art, 128x128 skill effect, dual sword storm AOE explosion, twin vortex of blades spiraling together into one massive combined storm, silver-blue energy eruption, larger impact than single sword version, transparent background
+2D pixel art, subtle ambient effect, faint yellow speed-line shimmer trailing both blades constantly, low-intensity constant glow, transparent background
 ```
 
 ---
@@ -306,18 +311,18 @@ Style effect: `2D pixel art, skill visual effect animation frame, dynamic action
 
 ---
 
-### 9. Song Long Phá Thiên — Lv80
+### 9. Huyết Vũ Song Đao — Lv80 (Passive)
 
 - **Icon:**
 
 ```
-2D pixel art, 32x32 skill icon, two dragons colliding in explosion, dual sword combined ultimate strike, gold and blue dragon energy burst, transparent background
+2D pixel art, 32x32 skill icon, circular badge frame, dual blade silhouette with a small red droplet/heart accent indicating lifesteal, dark red glow, static passive skill icon, transparent background
 ```
 
 - **Effect:**
 
 ```
-2D pixel art, 128x128 skill effect, combined dual sword explosion strike, two dragon energy streams converging into single massive blue-gold eruption, shockwave ring, ground shatter cracks, overwhelming power visual, transparent background
+2D pixel art, subtle ambient effect, faint red droplet particle occasionally rising from blade edge toward character on hit, low-intensity, transparent background
 ```
 
 ---
@@ -374,18 +379,18 @@ Style effect: `2D pixel art, skill visual effect animation frame, dynamic action
 
 ---
 
-### 3. Long Thương — Lv20
+### 3. Thương Sĩ Kiên Trận — Lv20 (Passive)
 
 - **Icon:**
 
 ```
-2D pixel art, 32x32 skill icon, spear with dragon energy, blue dragon shape coiling around spear tip, pierce-through multiple targets symbol, transparent background
+2D pixel art, 32x32 skill icon, circular badge frame, spear silhouette with a small shield/heart accent indicating HP and stance, earthy brown-green glow, static passive skill icon, transparent background
 ```
 
 - **Effect:**
 
 ```
-2D pixel art, 192x48 skill effect, dragon spear piercing multiple enemies in line, blue dragon energy surrounding spear as it travels through, each target hit with burst, long screen-crossing pierce, transparent background
+2D pixel art, subtle ambient effect, faint brown-green grounded aura around character's feet, low-intensity constant glow, transparent background
 ```
 
 ---
@@ -406,18 +411,18 @@ Style effect: `2D pixel art, skill visual effect animation frame, dynamic action
 
 ---
 
-### 5. Thương Vũ — Lv40
+### 5. Trường Thương Xuyên Giáp — Lv40 (Passive)
 
 - **Icon:**
 
 ```
-2D pixel art, 32x32 skill icon, spear in center with 360-degree slash marks all around it, full circle AOE symbol, brown-silver with blue spin ring, transparent background
+2D pixel art, 32x32 skill icon, circular badge frame, spear tip piercing a small cracked-armor icon, orange accent indicating bonus damage vs weakened targets, static passive skill icon, transparent background
 ```
 
 - **Effect:**
 
 ```
-2D pixel art, 128x128 skill effect, full 360-degree spear spin AOE, brown-silver spear blur ring spinning outward, circular wind pressure explosion, all-direction hit visual, transparent background
+2D pixel art, subtle ambient effect, faint orange glint on spear tip only when striking an already-weakened target, low-intensity, transparent background
 ```
 
 ---
@@ -438,18 +443,18 @@ Style effect: `2D pixel art, skill visual effect animation frame, dynamic action
 
 ---
 
-### 7. Long Quyển Phong — Lv60
+### 7. Thương Pháp Quảng Vực — Lv60 (Passive)
 
 - **Icon:**
 
 ```
-2D pixel art, 32x32 skill icon, spear planted in ground creating vortex/funnel above it, blue tornado pulling things inward, crowd-pull skill icon, transparent background
+2D pixel art, 32x32 skill icon, circular badge frame, spear silhouette with a small expanding-ring range indicator, cyan accent indicating extended reach, static passive skill icon, transparent background
 ```
 
 - **Effect:**
 
 ```
-2D pixel art, 128x128 skill effect, spear planted creating pull tornado, blue-white wind funnel spinning and drawing enemies toward center, wind particle debris, ground crack where spear planted, pull gravity effect, transparent background
+2D pixel art, subtle ambient effect, faint cyan outline extending slightly beyond spear tip length, low-intensity constant glow, transparent background
 ```
 
 ---
@@ -470,18 +475,18 @@ Style effect: `2D pixel art, skill visual effect animation frame, dynamic action
 
 ---
 
-### 9. Rồng Giáng Thế — Lv80
+### 9. Long Thương Khống Chế — Lv80 (Passive)
 
 - **Icon:**
 
 ```
-2D pixel art, 32x32 skill icon, spear slamming down with dragon head energy burst, ground shockwave lines radiating outward, earth-shake visual, transparent background
+2D pixel art, 32x32 skill icon, circular badge frame, spear silhouette with a small icy-blue snail/slow symbol accent, pale blue glow indicating slow proc, static passive skill icon, transparent background
 ```
 
 - **Effect:**
 
 ```
-2D pixel art, 128x128 skill effect, spear slammed into ground with dragon energy, massive ground shockwave expanding outward in all directions, earth cracks forming, rock debris flying, stun lightning burst, dragon roar energy pulse, transparent background
+2D pixel art, subtle ambient effect, faint pale blue frost mist trailing spear tip on hit, low-intensity, transparent background
 ```
 
 ---
@@ -538,18 +543,18 @@ Style effect: `2D pixel art, skill visual effect animation frame, dynamic action
 
 ---
 
-### 3. Mưa Tên — Lv20
+### 3. Cung Thủ Thủ Thế — Lv20 (Passive)
 
 - **Icon:**
 
 ```
-2D pixel art, 32x32 skill icon, multiple arrows raining down from above, cloud or sky at top with arrows falling like rain, red target zone at bottom, AOE rain attack icon, transparent background
+2D pixel art, 32x32 skill icon, circular badge frame, bow silhouette with a small shield/distance-ring accent, pale green glow indicating damage reduction at range, static passive skill icon, transparent background
 ```
 
 - **Effect:**
 
 ```
-2D pixel art, 128x128 skill effect, arrow rain falling from sky, dozens of arrows raining down from top of frame, impact explosions across ground area, shadow of impact zone, dramatic downpour of arrows, transparent background
+2D pixel art, subtle ambient effect, faint pale green ring shimmer around character when standing far from target, low-intensity constant glow, transparent background
 ```
 
 ---
@@ -570,18 +575,18 @@ Style effect: `2D pixel art, skill visual effect animation frame, dynamic action
 
 ---
 
-### 5. Tên Bùng Nổ — Lv40
+### 5. Nhãn Lực Tập Trung — Lv40 (Passive)
 
 - **Icon:**
 
 ```
-2D pixel art, 32x32 skill icon, arrow with explosive red tip, small bomb or fire symbol on arrowhead, explosion burst preview circle around tip, transparent background
+2D pixel art, 32x32 skill icon, circular badge frame, eye with crosshair accent, golden focus glow indicating crit chance while stationary, static passive skill icon, transparent background
 ```
 
 - **Effect:**
 
 ```
-2D pixel art, 96x96 skill effect, arrow exploding on impact, arrow hitting and erupting in orange-red explosion, fire particles and shrapnel flying outward, smoke cloud, AOE blast ring, transparent background
+2D pixel art, subtle ambient effect, faint golden targeting reticle fading in only after standing still briefly, low-intensity, transparent background
 ```
 
 ---
@@ -602,18 +607,18 @@ Style effect: `2D pixel art, skill visual effect animation frame, dynamic action
 
 ---
 
-### 7. Phong Tiễn — Lv60
+### 7. Cung Pháp Tốc Xạ — Lv60 (Passive)
 
 - **Icon:**
 
 ```
-2D pixel art, 32x32 skill icon, arrow with green wind spiral around it, blue-green wind energy coiling around shaft, slow/knockback debuff symbol, transparent background
+2D pixel art, 32x32 skill icon, circular badge frame, bow silhouette with small speed-line accent behind an arrow, yellow-green glow indicating attack speed while kiting, static passive skill icon, transparent background
 ```
 
 - **Effect:**
 
 ```
-2D pixel art, 96x96 skill effect, wind arrow impact, arrow hitting with burst of green-blue wind energy, spiral wind rings expanding outward, leaves and debris pushed back, slow effect swirl on target, transparent background
+2D pixel art, subtle ambient effect, faint yellow-green speed shimmer around bow only while character is backing away from target, low-intensity, transparent background
 ```
 
 ---
@@ -634,18 +639,18 @@ Style effect: `2D pixel art, skill visual effect animation frame, dynamic action
 
 ---
 
-### 9. Vạn Tiễn Quy Tông — Lv80
+### 9. Bách Xạ Quán Nhật — Lv80 (Passive)
 
 - **Icon:**
 
 ```
-2D pixel art, 32x32 skill icon, twenty arrows fanning outward then curving back in circular boomerang path, return path shown by dotted arc, homing arrows icon, transparent background
+2D pixel art, 32x32 skill icon, circular badge frame, bow silhouette with a small "10" counter and a free bonus arrow marker, golden accent indicating free proc shot, static passive skill icon, transparent background
 ```
 
 - **Effect:**
 
 ```
-2D pixel art, 192x192 skill effect, twenty arrows fanning out in all directions then curving back to converge on target, arrows with curving blue trail paths, final convergence explosion at center, spectacular boomerang arrow barrage, transparent background
+2D pixel art, subtle ambient effect, faint golden arrow silhouette building up on the bowstring, releasing automatically every 10th shot, low-intensity, transparent background
 ```
 
 ---
@@ -702,18 +707,18 @@ Style effect: `2D pixel art, skill visual effect animation frame, dynamic action
 
 ---
 
-### 3. Phân Thân — Lv20
+### 3. Ẩn Thân Bộ Pháp — Lv20 (Passive)
 
 - **Icon:**
 
 ```
-2D pixel art, 32x32 skill icon, character silhouette splitting into two ghost copies, blue-purple phantom split effect, clone skill symbol, transparent background
+2D pixel art, 32x32 skill icon, circular badge frame, ninja footstep silhouette with small speed-line accents, teal glow indicating move speed, static passive skill icon, transparent background
 ```
 
 - **Effect:**
 
 ```
-2D pixel art, 128x64 skill effect, ninja splitting into two clones, original figure and two translucent blue-purple phantom copies materializing beside it, smoke puff at split points, clone spawn visual, transparent background
+2D pixel art, subtle ambient effect, faint teal dust trail behind character's feet while moving, low-intensity constant glow, transparent background
 ```
 
 ---
@@ -734,18 +739,18 @@ Style effect: `2D pixel art, skill visual effect animation frame, dynamic action
 
 ---
 
-### 5. Độc Tiêu — Lv40
+### 5. Độc Ảnh Thích Sát — Lv40 (Passive)
 
 - **Icon:**
 
 ```
-2D pixel art, 32x32 skill icon, green poison shuriken, throwing star dripping green poison, skull or poison symbol near it, DOT status skill icon, transparent background
+2D pixel art, 32x32 skill icon, circular badge frame, shuriken silhouette with a small skull/status-effect accent, sickly green-purple glow indicating bonus damage vs debuffed targets, static passive skill icon, transparent background
 ```
 
 - **Effect:**
 
 ```
-2D pixel art, 64x64 skill effect, poison shuriken impact, green-tipped shuriken lodged in target releasing green toxic cloud, poison drip particles, nausea swirl effect on target, DOT visual, transparent background
+2D pixel art, subtle ambient effect, faint green-purple glint on weapon only when striking a target already affected by a status effect, low-intensity, transparent background
 ```
 
 ---
@@ -766,18 +771,18 @@ Style effect: `2D pixel art, skill visual effect animation frame, dynamic action
 
 ---
 
-### 7. Liên Hoàn Phi Tiêu — Lv60
+### 7. Thân Ảnh Bất Định — Lv60 (Passive)
 
 - **Icon:**
 
 ```
-2D pixel art, 32x32 skill icon, ten shurikens in rapid fire stream, dense barrage of spinning stars in tight formation, machine-gun throw icon, transparent background
+2D pixel art, 32x32 skill icon, circular badge frame, ninja silhouette with a small clock/hourglass accent and a crit star, purple-cyan glow indicating cooldown reduction on crit, static passive skill icon, transparent background
 ```
 
 - **Effect:**
 
 ```
-2D pixel art, 192x64 skill effect, rapid shuriken barrage of 10 stars, dense stream of spinning silver shurikens flying in rapid succession, overlapping motion blurs, intense projectile barrage visual, transparent background
+2D pixel art, subtle ambient effect, faint purple-cyan clock-hand shimmer flickering briefly around weapon only right after a critical hit, low-intensity, transparent background
 ```
 
 ---
@@ -798,18 +803,18 @@ Style effect: `2D pixel art, skill visual effect animation frame, dynamic action
 
 ---
 
-### 9. Ám Sát — Lv80
+### 9. Vô Ảnh Phân Thân — Lv80 (Passive)
 
 - **Icon:**
 
 ```
-2D pixel art, 32x32 skill icon, ninja appearing behind enemy with kunai to throat, backstab position, dark red critical hit burst, assassin skill icon, transparent background
+2D pixel art, 32x32 skill icon, circular badge frame, faint translucent ninja clone silhouette behind a low-HP heart marker, dark purple glow indicating emergency clone proc, static passive skill icon, transparent background
 ```
 
 - **Effect:**
 
 ```
-2D pixel art, 128x128 skill effect, instant assassination backstab, dark smoke burst then ninja appearing directly behind target, massive crimson critical hit slash, dark energy explosion, stun stars, devastating single-target kill shot visual, transparent background
+2D pixel art, subtle ambient effect, dormant translucent clone silhouette faintly visible behind character, only fully materializing briefly when HP drops low, low-intensity, transparent background
 ```
 
 ---
