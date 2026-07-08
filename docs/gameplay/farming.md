@@ -122,7 +122,7 @@ Giảm mỗi giờ = 50 / thời_gian_chín_giờ (%)
 | Hoa ánh trăng | Drop từ Boss / Sự kiện | 36h | 2 hoa | 8.000đ/hoa | **Chỉ thu hoạch ban đêm** |
 | Cây linh khí | Drop từ hang động Lv 60+ | 42h | 1 cây | 12.000đ | Cần Bình tưới thần |
 | Hạt giống cổ đại | Boss drop duy nhất | 48h | Random item | — | Kết quả là 1 item Legendary ngẫu nhiên |
-| Tinh hoa thiên nhiên | Craft: 3 Nhân sâm + 3 Sâm đỏ + 5 Linh khí | — | — | 20.000đ | Không trồng — dùng để craft trang bị Mythic |
+| Tinh hoa thiên nhiên | Drop từ Boss cuối / Sự kiện (không bán ở chợ), Lv 60+ | 60h | 1 tinh hoa | 20.000đ | Cũng chế được: 3 Nhân sâm + 3 Sâm đỏ + 5 Linh khí (`docs/gameplay/crafting.md`) — trồng trực tiếp chỉ là 1 nguồn thay thế, không thay thế công thức craft |
 
 ---
 

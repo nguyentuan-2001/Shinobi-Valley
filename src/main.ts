@@ -14,6 +14,15 @@ const config: Phaser.Types.Core.GameConfig = {
   backgroundColor: '#79C4FF',
   pixelArt: true,
   roundPixels: true,
+  // `parent` bắt buộc phải có giá trị thì Phaser mới thực sự tạo DOM container dù `dom.createContainer` đã
+  // bật (xem `node_modules/phaser/src/dom/CreateDOMContainer.js`: `if (!config.parent || !config.domCreateContainer) return`)
+  // — trước đó thiếu dòng này khiến `this.add.dom()` ném lỗi "No DOM Container set in game config" dù config
+  // đã set `dom.createContainer: true` (bug thật gặp khi verify bằng Puppeteer). Canvas vẫn append vào
+  // `document.body` như trước (`index.html` không có wrapper div riêng), không đổi layout gì cả.
+  parent: document.body,
+  // Bật container DOM — cần cho 2 ô input số (từ ô # / đến ô #) ở bảng Công Cụ Nông Trại (`GameScene`), Phaser
+  // không có text input dựng bằng Canvas/WebGL nên phải dùng input HTML thật đè lên canvas qua `this.add.dom()`.
+  dom: { createContainer: true },
   physics: {
     default: 'arcade',
     arcade: { gravity: { x: 0, y: 0 }, debug: false }

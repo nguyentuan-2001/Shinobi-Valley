@@ -64,12 +64,12 @@ export class PreloadScene extends Phaser.Scene {
     this.load.image('farm_soil_tilled', '/assets/tilesets/farm/soil_tilled.png')
     this.load.image('farm_soil_water_pot', '/assets/tilesets/farm/soil_water_pot.png')
 
-    // Sprite cây trồng — đủ 19 cây trong crops.json (khớp `GameScene.PLANTABLE_CROP_IDS`), mỗi cây 4 giai đoạn
+    // Sprite cây trồng — đủ 20 cây trong crops.json (khớp `GameScene.PLANTABLE_CROP_IDS`), mỗi cây 4 giai đoạn
     // hiển thị trên map (seed/sprout/growing/harvest — harvest = cây chín còn trên đất, load riêng file
     // `<id>_harvest.png`). Load thêm key `crop_<id>_item` từ `<id>.png` (item icon) — dùng cho hiệu ứng bay
     // lên khi thu hoạch (xem GameScene.playHarvestFx()); Inventory UI thật (hiện icon trong túi đồ) vẫn để
-    // Sprint 4. Không load `natures_essence` dù có sprite sẵn — nguyên liệu craft-only, không có trong
-    // crops.json/PLANTABLE_CROP_IDS.
+    // Sprint 4. `natures_essence` trước đây bị loại vì tưởng craft-only, giờ trồng được như thường (xem
+    // GameScene.PLANTABLE_CROP_IDS + docs/planning/progress.md).
     // Key texture theo mẫu `crop_<id>_<stage>` để GameScene tra cứu động (xem FarmManager.getVisualStage()).
     const PLANTABLE_CROPS = [
       'green_onion',
@@ -90,7 +90,8 @@ export class PreloadScene extends Phaser.Scene {
       'sunflower',
       'moonlight_flower',
       'spirit_energy_plant',
-      'ancient_seed'
+      'ancient_seed',
+      'natures_essence'
     ] as const
     const CROP_STAGE_SUFFIX: Record<string, string> = {
       seed: '_seed',

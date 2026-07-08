@@ -397,5 +397,26 @@
     "moisture_decay_per_hour": 1,
     "moisture_min": 50,
     "moisture_max": 100
+  },
+  {
+    "id": "natures_essence",
+    "name": "Tinh hoa thiên nhiên",
+    "tier": "rare",
+    "seed_cost": 0,
+    "growth_hours": 60,
+    "multi_harvest": false,
+    "harvest_count": 1,
+    "regrow_hours": 0,
+    "yield_min": 1,
+    "yield_max": 1,
+    "sell_price": 20000,
+    "unlock_level": 60,
+    "needs_water_tile": false,
+    "night_only": false,
+    "special_tool": null,
+    "crafting_tag": ["material"],
+    "moisture_decay_per_hour": 0.8,
+    "moisture_min": 50,
+    "moisture_max": 100
   }
 ]

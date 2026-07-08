@@ -184,7 +184,7 @@
 | Coal | 35đ | Khai thác Hang Động |
 | Ancient Wood | 150đ | Rừng Cổ |
 | Cloth | 200đ/mảnh | Craft từ len thô |
-| Tinh hoa thiên nhiên | 20.000đ | Craft: 3 Nhân sâm + 3 Sâm đỏ + 5 Linh khí tại Nhà giả kim Lv 2 |
+| Tinh hoa thiên nhiên | 20.000đ | Trồng trực tiếp (Tier Hiếm, Lv 60+, xem `farming.md`) hoặc Craft: 3 Nhân sâm + 3 Sâm đỏ + 5 Linh khí tại Nhà giả kim Lv 2 |
 
 ---
 

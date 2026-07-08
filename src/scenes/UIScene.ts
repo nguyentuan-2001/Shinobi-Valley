@@ -34,7 +34,9 @@ export class UIScene extends Phaser.Scene {
       fontFamily: 'monospace'
     })
     const updateSeedText = (name: string) =>
-      seedText.setText(`Hạt giống: ${name} (Enter cuốc/mở menu, ←/→ chọn hạt)`)
+      seedText.setText(
+        `Hạt giống: ${name} (Enter: cuốc/trồng/tưới/hái · ←/→ chọn hạt · I: túi đồ · F: công cụ nông trại)`
+      )
     updateSeedText(this.registry.get('selectedSeedName') ?? '')
     const onSeedNameChange = (_parent: unknown, name: string) => updateSeedText(name)
     this.registry.events.on('changedata-selectedSeedName', onSeedNameChange)
