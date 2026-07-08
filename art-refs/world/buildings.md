@@ -96,6 +96,12 @@ Công trình lớn dùng **64x64** hoặc ghép nhiều tile 32x32.
 2D pixel art, 32x32 building sprite, top-down view, stone village well, round grey stone ring, wooden crossbar with rope and bucket, slight water shimmer at top, moss on stone sides, central village landmark, transparent background
 ```
 
+### Bến Câu Cá (Fishing Dock)
+
+```
+2D pixel art, 64x32 building sprite, top-down view, small wooden fishing dock extending over calm lake water, weathered grey-brown wooden planks, a few mooring posts with rope, a small stack of empty wicker fish baskets and a resting bamboo fishing rod leaning against a post, gentle water ripples and reflection beneath the dock, peaceful lakeside landmark, transparent background
+```
+
 ---
 
 ## CÔNG TRÌNH CÔNG CỘNG (Public Buildings)
@@ -126,12 +132,40 @@ Công trình lớn dùng **64x64** hoặc ghép nhiều tile 32x32.
 
 ---
 
-## CỔNG & LỐI VÀO (Gates & Entrances)
+## QUẢNG TRƯỜNG & CÔNG TRÌNH CỐT TRUYỆN (Village Square & Story Landmarks)
 
-### Cổng Làng (Village Gate)
+### Quảng Trường Làng (Village Square)
+
+*Ground/plaza tile lớn, không phải building — trung tâm làng, nơi Bảng Thông Báo và Linh Thụ Cổ Đại đứng cạnh nhau (xem 2 mục dưới).*
 
 ```
-2D pixel art, 64x32 building sprite, top-down view, traditional wooden village gate arch, two large wooden pillars with crossbeam, red paper lanterns hanging from arch, village name sign, welcoming entrance landmark, transparent background
+2D pixel art, top-down view, open village square ground area, wide smooth stone-paved plaza with a simple radial paving pattern, roads branching outward in four directions from the center, a few scattered wooden benches, small potted plants along the edges, warm inviting community gathering space, cozy RPG village style, transparent background
+```
+
+### Linh Thụ Cổ Đại (Ancient Tree Memorial)
+
+*Chưa tha hóa — đối tượng cốt truyện quan trọng nhất trong làng, đặt ở Bắc Quảng Trường. Bản bị Ma Khí chiếm hoàn toàn ở cuối game là BOSS CUỐI riêng, xem `art-refs/enemies/monsters.md` mục "Linh Thụ Ma Hóa" — KHÔNG dùng chung sprite.*
+
+```
+2D pixel art, 64x64 building sprite, top-down view, massive ancient sacred tree, thick weathered bark with deep grooves, lush green canopy on the upper half but the lower trunk noticeably darker and duller (early corruption), soft warm golden-white glow emanating faintly from within the trunk, small offerings and lanterns placed at its roots, revered village landmark, transparent background
+```
+
+### Bảng Thông Báo (Notice Board)
+
+```
+2D pixel art, 32x32 building sprite, top-down view, wooden notice board post, brown wooden frame, several colorful paper notices pinned to board, red seal stamps visible, quest giver landmark, transparent background
+```
+
+---
+
+## CỔNG & LỐI VÀO (Gates & Entrances)
+
+### Cổng Làng Đông (East Village Gate — Bị Phong Ấn)
+
+*Lối ra duy nhất khỏi làng, bị niêm phong bởi Ma Khí — không thể mở tới Act 3. Xem `docs/world/village.md` mục 12.*
+
+```
+2D pixel art, 64x64 building sprite, top-down view, traditional wooden village gate arch with two large weathered pillars and a crossbeam, the archway completely blocked by a swirling wall of dark shadow-purple energy, faint crackling wisps along its edges, a barely visible phantom guard silhouette standing motionless before it, forbidding sealed exit, ominous but not gory, transparent background
 ```
 
 ### Cổng Map Boss (Ancient Temple Gate)

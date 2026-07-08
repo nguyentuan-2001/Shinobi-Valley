@@ -76,8 +76,24 @@ Style chung: `2D pixel art, 32x32 character sprite, clean outlines, white backgr
 
 ---
 
-## 10. Người Giao Nhiệm Vụ (Quest Giver)
+## 10. Cô Gái Gacha (Gacha Keeper)
 
 ```
-2D pixel art, 32x32 character sprite, energetic quest giver, young adult, travel-worn outfit with cape, holding rolled up notice board papers, excited wide-eyed expression, multiple quest notices pinned to satchel, adventurous and eager, quest board NPC, transparent background
+2D pixel art, 32x32 character sprite, playful gacha keeper, young woman with bright cheerful expression, colorful patchwork outfit with small capsule-shaped charms hanging from her belt, holding a small glowing gacha capsule ball, sparkly excited eyes, festive and inviting, gacha booth NPC, transparent background
 ```
+
+---
+
+## NPC Cốt Truyện (Story-only NPCs)
+
+*Không thuộc 10 NPC chính có shop/quest cố định — chỉ xuất hiện theo tiến trình cốt truyện. Xem `docs/design/story.md`.*
+
+### Thiếu Nữ Rừng — Linh
+
+*Phân thân của Linh Thụ Cổ Đại (xem `art-refs/world/buildings.md` mục Linh Thụ Cổ Đại), hiện thân dưới dạng người. Chỉ Mist thấy được cô — dân làng không nhìn thấy.*
+
+```
+2D pixel art, 32x32 character sprite, mysterious forest spirit girl, young woman with flowing sea-green hair, simple flowing white robe with faint leaf-pattern trim, bare feet, translucent soft glow around the edges of her body as if not fully solid, calm serene expression with knowing eyes, small glowing particles drifting near her, ethereal and gentle, transparent background
+```
+
+*Ghi chú: nhân vật Hoàng bị Ma Khí kiểm soát (gặp tại Rừng Thiêng Lv 40) không phải NPC — xem prompt riêng ở `art-refs/enemies/monsters.md` mục Map 6, "Hoàng — Bị Ma Khí Kiểm Soát".*

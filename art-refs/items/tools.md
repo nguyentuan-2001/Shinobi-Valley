@@ -51,6 +51,14 @@ Style chung: `2D pixel art, 32x32 item icon, farming tool, clean outlines, white
 2D pixel art, 32x32 item icon, enchanted watering can, polished blue metal, magical blue water droplets sparkling from spout, wider shower area, blue magic glow, waters larger area, transparent background
 ```
 
+### Overlay Đất Ẩm (Moist Soil Overlay)
+
+*Tile phủ lên `soil_tilled.png` khi ô đất đang có cây sống — đổi độ bóng/màu theo % moisture (`FarmManager.getMoisture()`, 50-100%), hiện đang dùng texture vẽ bằng code tạm (`GameScene.createMoistureOverlayTexture()`), xem `docs/planning/progress.md` Sprint 4.*
+
+```
+2D pixel art, 32x32 tile overlay, moist dark soil patch, damp glossy sheen on the surface, slightly darker brown than dry tilled soil, small water sheen highlights, no hard edges (blends into the soil tile beneath it), transparent background
+```
+
 ---
 
 ### Dao Gặt / Liềm (Scythe / Sickle)

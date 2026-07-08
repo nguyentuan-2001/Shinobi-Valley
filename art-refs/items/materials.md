@@ -146,6 +146,14 @@ Style chung: `2D pixel art, 32x32 item icon, crafting material, clean outlines, 
 2D pixel art, 32x32 item icon, ancient artifact fragment, dark stone piece with glowing runes, mysterious origin, story quest item, purple-gold rune glow, transparent background
 ```
 
+### Mảnh Ký Ức (Lore Fragment)
+
+*10 mảnh dùng chung 1 thiết kế icon (xem `docs/design/story.md` mục "Mảnh Ký Ức") — chỉ khác nhau ở nội dung lore khi đọc, không cần 10 sprite riêng.*
+
+```
+2D pixel art, 32x32 item icon, glowing memory fragment, small translucent teardrop-shaped shard, soft warm gold-white inner light with a faint ghostly image swirling inside (like a captured memory), gentle sparkle particles drifting around it, precious lore collectible, transparent background
+```
+
 ### Leather (Da)
 ```
 2D pixel art, 32x32 item icon, tanned leather piece, brown-tan square of animal hide, stitched edges, crafting material, transparent background

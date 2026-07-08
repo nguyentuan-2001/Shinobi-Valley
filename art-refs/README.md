@@ -22,10 +22,10 @@ assets/
 │   └── equipment.md      Trang bị 5 rank + đá cường hóa
 │
 ├── enemies/              Kẻ địch
-│   └── monsters.md       20 quái + 5 mini boss + Rồng Cổ Đại (3 phase)
+│   └── monsters.md       24 quái + 1 quái cốt truyện đặc biệt (Hoàng) + 6 mini boss + Linh Thụ Ma Hóa (3 phase)
 │
 ├── world/                Thế giới
-│   ├── maps.md           7 bản đồ (background, tileset, thumbnail)
+│   ├── maps.md           9 bản đồ — Map 0-8 (background, tileset, thumbnail)
 │   ├── buildings.md      Nhà cửa, cửa hàng, chuồng trại, công trình làng
 │   └── decorations.md    Trang trí ngoài trời + nội thất trong nhà
 │

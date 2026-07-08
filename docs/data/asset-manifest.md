@@ -62,9 +62,11 @@ Nguồn: `art-refs/characters/npcs.md`
 | `item_buyer` | Người Thu Mua |
 | `martial_arts_teacher` | Giáo Viên Võ Thuật |
 | `researcher` | Nhà Nghiên Cứu |
-| `quest_giver` | Người Giao Nhiệm Vụ |
+| `gacha_keeper` | Cô Gái Gacha |
 
 File: `<id>.png`. Khớp field `id` trong `npc.json` (data-schema.md).
+
+**NPC cốt truyện** (không có shop/quest cố định, không nằm trong `npc.json`): `linh` (Thiếu Nữ Rừng) — xem `art-refs/characters/npcs.md` mục "NPC Cốt Truyện". Hoàng (bị Ma Khí kiểm soát) KHÔNG phải NPC, xem mục 6 (Quái vật & Boss).
 
 ---
 
@@ -195,14 +197,17 @@ Nguồn: `art-refs/enemies/monsters.md`. Mini-boss và Boss cuối → thư mụ
 
 | Map | Quái thường (`monsters/`) | Mini-boss (`bosses/`, 64×64) |
 |---|---|---|
-| Đồng Cỏ | `wild_rabbit`, `small_wolf`, `green_slime` | `alpha_wolf` |
-| Rừng Tre | `forest_fox`, `poison_spider`, `bamboo_bear` | `black_wolf` |
-| Hang Động | `night_bat`, `skeleton_warrior`, `stone_golem` | `golem_king` |
-| Núi Tuyết | `snowman_monster`, `ice_wolf`, `snow_spirit` | `ice_wolf_king` |
-| Rừng Cổ | `ent`, `plant_ghost`, `spirit_beast` | `ancient_tree_guardian` |
+| Map 2 — Đồng Cỏ | `wild_rabbit`, `fire_fox`, `wild_boar`, `grass_wolf` | `giant_wolf` |
+| Map 3 — Rừng Tre | `black_wolf`, `bamboo_bear`, `small_spider`, `lynx_spirit` | `great_bamboo_bear` |
+| Map 4 — Hang Động | `poison_spider`, `skeleton_warrior`, `stone_golem`, `vampire_bat` | `crystal_golem` |
+| Map 5 — Núi Tuyết | `ice_wolf`, `ice_spirit`, `small_ice_dragon`, `snowman_monster` | `great_ice_spirit` |
+| Map 6 — Rừng Thiêng | `spirit_fox`, `night_ghost_moth`, `corrupted_beast`, `monster_tree` | `corrupted_beast_leader` |
+| Map 7 — Rừng Cổ | `small_ancient_dragon`, `enraged_spirit_kin`, `ancient_stone_person`, `death_wraith` | `ancient_dragon_guardian` |
 
-Boss cuối (`bosses/`, 128×128, 3 file riêng theo phase):
-`ancient_dragon_phase1.png`, `ancient_dragon_phase2.png`, `ancient_dragon_phase3.png`
+Quái cốt truyện đặc biệt (không lặp lại, không phải mini-boss): `hoang_corrupted` (Hoàng bị Ma Khí kiểm soát, Map 6) — xem `art-refs/enemies/monsters.md`.
+
+Boss cuối (`bosses/`, 128×128, 3 file riêng theo phase — **Linh Thụ Ma Hóa**, KHÔNG phải rồng):
+`corrupted_tree_phase1.png`, `corrupted_tree_phase2.png`, `corrupted_tree_phase3.png`
 
 ---
 
@@ -302,7 +307,7 @@ Nguồn: `art-refs/items/materials.md`
 | `monster_core`, `wolf_fur`, `bone_fragment`, `spider_silk`, `dragon_scale`, `boss_core` | Drop quái |
 | `herb`, `poison_sac` | Dược liệu (mushroom dùng chung `crops/mushroom.png`) |
 | `enhancement_stone_common/rare/epic/legendary`, `enhancement_scroll` | Cường hóa |
-| `key_fragment`, `ancient_relic`, `leather` | Đặc biệt |
+| `key_fragment`, `ancient_relic`, `leather`, `lore_fragment` | Đặc biệt (`lore_fragment` dùng chung 1 sprite cho cả 10 mảnh ký ức, xem `docs/design/story.md`) |
 
 ---
 
@@ -329,7 +334,13 @@ Nguồn: `art-refs/ui/ui.md`
 
 **`ui/icons/`** (status buff/debuff, 16×16): `status_poison`, `status_bleed`, `status_slow`, `status_stun`, `status_atk_buff`, `status_def_buff`, `status_atk_debuff`, `status_def_debuff`
 
-**`ui/frames/`:** `dialogue_box`, `item_slot`, `skill_slot`, `button_confirm`, `button_cancel`, `quality_frame_common`, `quality_frame_rare`, `quality_frame_epic`, `quality_frame_legendary`, `quality_frame_mythic`
+**`ui/frames/`:** `dialogue_box`, `item_slot`, `skill_slot`, `button_confirm`, `button_cancel`, `quality_frame_common`, `quality_frame_rare`, `quality_frame_epic`, `quality_frame_legendary`, `quality_frame_mythic`, `menu_panel` (khung bảng menu chính, dùng chung cho mọi menu mở ra kể cả Quest Log), `minimap_frame`
+
+**`ui/icons/`** (nghề nghiệp, 32×32): `profession_farmer`, `profession_blacksmith`, `profession_hunter`, `profession_chef`, `profession_fisherman`, `profession_alchemist`
+
+**`ui/icons/`**: `quest_marker` (world marker, 24×24)
+
+**`ui/gacha/`:** `banner_standard`, `banner_premium`, `reveal_burst`
 
 ---
 
@@ -342,9 +353,11 @@ Nguồn: `art-refs/world/buildings.md`
 | `player_house_1/2/3` | Nhà chính người chơi (3 cấp) |
 | `shop_general`, `shop_seed` | Cửa hàng tổng hợp / hạt giống |
 | `blacksmith_forge`, `alchemist_shop`, `market_stall` | Lò rèn / giả kim / chợ |
-| `chicken_coop`, `barn`, `storage_shed`, `greenhouse`, `village_well` | Công trình nông trại |
+| `chicken_coop`, `barn`, `storage_shed`, `greenhouse`, `village_well` | Công trình nông trại — `village_well` đã đặt lên map Farm thật (`data/wellPlacement.ts`, tự động tưới 3×3 xung quanh mỗi sáng, xem `progress.md` Sprint 4), hiện dùng texture vẽ bằng code tạm vì chưa gen ảnh thật |
 | `chief_house`, `notice_board`, `dojo`, `research_hall` | Công trình công cộng |
-| `village_gate`, `boss_gate` | Cổng |
+| `fishing_dock` | Bến Câu Cá |
+| `village_square`, `ancient_tree_memorial` | Quảng Trường Làng, Linh Thụ Cổ Đại (chưa tha hóa — bản tha hóa là boss cuối, xem mục 6) |
+| `east_gate_sealed`, `boss_gate` | Cổng (đổi tên từ `village_gate` — cổng làng thật là cổng bị phong ấn, không phải cổng chào) |
 
 ---
 
@@ -383,19 +396,22 @@ Còn thiếu (chưa có prop từ nguồn nào), cần gen thêm:
 
 Nguồn: `public/images/BaseMap/*.png` (6 sheet đã tách nền + cắt lẻ) theo `art-refs/world/maps.md`. Mỗi map có `background.png` (tranh minh họa/thumbnail, giữ nguyên không cắt) + các tile texture rời (autotile nền/đường/tường — prop rời đã chuyển qua mục 16 Decorations).
 
+**⚠️ Quyết định kiến trúc mới (xem `dev-schedule.md` Sprint 12 + `art-refs/world/maps.md`):** chỉ Map 0/1/8 (Hub/Farm/Boss Arena) dùng `background.png` nguyên khối làm nền thật trong game. **Map 2-7 (6 map chiến đấu) đổi sang backdrop parallax (nền xa, không vẽ mặt đất) + tile foreground** — 5 file `background.png` đã cắt cho `grassland/`, `bamboo_forest/`, `cave/`, `snow_mountain/`, `ancient_forest/` hiện tại là ảnh scene ĐẦY ĐỦ (vẽ theo hướng cũ, trước khi có quyết định này) — **cần gen lại thành `backdrop.png`** (chỉ trời/núi/rừng xa, không có mặt đất) + thêm `thumbnail.png` riêng (64×64, cho menu chọn map) khi tới Sprint 12, prompt mới đã có sẵn trong `art-refs/world/maps.md`. `sacred_forest/` (Map 6) chưa gen gì cả nên làm đúng theo kiến trúc mới ngay từ đầu, không cần sửa lại.
+
 | Thư mục | Map | Texture tile đã cắt |
 |---|---|---|
-| `village/` | Làng (không có prompt art-refs riêng, tự thiết kế theo `world/village.md`) | — |
-| `farm/` | Map 0 — Nông Trại, prompt ở `art-refs/world/maps.md` | **Đã đổi kiến trúc**: không còn ghép tile-grid nữa, dùng thẳng `BaseMap.png` làm ảnh nền tĩnh toàn cảnh (xem `docs/planning/progress.md`). Toàn bộ tile lẻ cũ (`grass_plain`, `soil_tilled_dry/wet`, `dirt_path_*`, `fence_*`, `pond_water_tile`, `signpost`, `hay_bale`, `wood_pile`, `grass_tuft`, `tileset.png`) đã xoá vì không còn dùng. |
-| `grassland/` | Map 1 — Đồng Cỏ | `background.png`, `grass_plain(_b)`, `path_autotile_01..16`, `grass_autotile_01`, `flower_patch_{red,yellow,pink}_a/b/c`, `dirt_patch_oval`, `dirt_path_strip`, `pond`, `water_tile_a/b` |
-| `bamboo_forest/` | Map 2 — Rừng Tre | `background.png`, `moss_patch_texture_a/b`, `stone_path_corner/straight/cross` |
-| `cave/` | Map 3 — Hang Động | `background.png`, `stone_floor_a..e`, `cracked_stone_floor_a/b`, `cracked_stone_ground_overlay`, `cave_wall_a..m`, `cave_wall_corner_a`, `cave_wall_edge_a..d`, `cave_wall_gap`, `cave_wall_curve_a..d`, `cave_wall_diagonal_a/b`, `support_beam_wall_a/b/c`, `underground_pool_a..d` |
-| `snow_mountain/` | Map 4 — Núi Tuyết | `background.png`, `snow_ground_a..g`, `snow_ground_notch_a`, `ice_patch_a`, `ice_patch_cracked_dark`, `snow_wall_corner_a/b/c`, `snow_wall_edge_jagged`, `ice_tile_diagonal_crack`, `ice_tile_crack_row`, `ice_tile_crack_checker`, `ice_wall_brick_a/corner/straight` |
-| `ancient_forest/` | Map 5 — Rừng Cổ | `background.png`, `mossy_hedge_plain_a..d`, `mossy_hedge_corner_a/b`, `mossy_hedge_path_corner_a/b`, `mossy_hedge_arch_a`, `stone_ruin_moss_texture_a`, `stone_ruin_moss_patch_a`, `stone_ruin_moss_edge_a`, `stone_ruin_wall_vine_a/b/c`, `stone_ruin_wall_mossy_a`, `stone_ruin_wall_brick_a`, `stone_ruin_wall_broken_a`, `stone_ruin_wall_stair`, `stone_ruin_wall_vine_texture_a..d`, `glowing_flower_patch_a/b` |
-| `sanctuary/` | Map Boss — Thánh Điện Cổ | `background.png`, `map_select_icon` (64×64), `floor_plain_a/b/c`, `floor_cracked_a..i`, `lava_crack_floor_a/b`, `lava_crack_floor_diagonal_a/b`, `rune_circle_fragment_a..j` (⚠️ mảnh rời của 1 vòng tròn rune lớn ghép từ nhiều tile, cần tự ghép lại trong Tiled nếu muốn dùng nguyên vòng) |
+| `village/` | Map 0 — Làng Ẩn Nhân (Hub), prompt nay đã có ở `art-refs/world/maps.md` (trước đây ghi nhầm "không có prompt riêng") | — chưa gen/cắt, mới có prompt |
+| `farm/` | Map 1 — Nông Trại, prompt ở `art-refs/world/maps.md` | **Đã đổi kiến trúc**: không còn ghép tile-grid nữa, dùng thẳng `BaseMap.png` làm ảnh nền tĩnh toàn cảnh (xem `docs/planning/progress.md`). Toàn bộ tile lẻ cũ (`grass_plain`, `soil_tilled_dry/wet`, `dirt_path_*`, `fence_*`, `pond_water_tile`, `signpost`, `hay_bale`, `wood_pile`, `grass_tuft`, `tileset.png`) đã xoá vì không còn dùng. |
+| `grassland/` | Map 2 — Đồng Cỏ | `background.png`, `grass_plain(_b)`, `path_autotile_01..16`, `grass_autotile_01`, `flower_patch_{red,yellow,pink}_a/b/c`, `dirt_patch_oval`, `dirt_path_strip`, `pond`, `water_tile_a/b` |
+| `bamboo_forest/` | Map 3 — Rừng Tre | `background.png`, `moss_patch_texture_a/b`, `stone_path_corner/straight/cross` |
+| `cave/` | Map 4 — Hang Động | `background.png`, `stone_floor_a..e`, `cracked_stone_floor_a/b`, `cracked_stone_ground_overlay`, `cave_wall_a..m`, `cave_wall_corner_a`, `cave_wall_edge_a..d`, `cave_wall_gap`, `cave_wall_curve_a..d`, `cave_wall_diagonal_a/b`, `support_beam_wall_a/b/c`, `underground_pool_a..d` |
+| `snow_mountain/` | Map 5 — Núi Tuyết | `background.png`, `snow_ground_a..g`, `snow_ground_notch_a`, `ice_patch_a`, `ice_patch_cracked_dark`, `snow_wall_corner_a/b/c`, `snow_wall_edge_jagged`, `ice_tile_diagonal_crack`, `ice_tile_crack_row`, `ice_tile_crack_checker`, `ice_wall_brick_a/corner/straight` |
+| `sacred_forest/` | Map 6 — Rừng Thiêng, prompt mới thêm ở `art-refs/world/maps.md` | — chưa gen/cắt gì, map hoàn toàn mới |
+| `ancient_forest/` | Map 7 — Rừng Cổ | `background.png`, `mossy_hedge_plain_a..d`, `mossy_hedge_corner_a/b`, `mossy_hedge_path_corner_a/b`, `mossy_hedge_arch_a`, `stone_ruin_moss_texture_a`, `stone_ruin_moss_patch_a`, `stone_ruin_moss_edge_a`, `stone_ruin_wall_vine_a/b/c`, `stone_ruin_wall_mossy_a`, `stone_ruin_wall_brick_a`, `stone_ruin_wall_broken_a`, `stone_ruin_wall_stair`, `stone_ruin_wall_vine_texture_a..d`, `glowing_flower_patch_a/b` |
+| `sanctuary/` | Map 8 — Thánh Điện Cổ (Boss Arena — Linh Thụ Ma Hóa, không phải rồng) | `background.png`, `map_select_icon` (64×64), `floor_plain_a/b/c`, `floor_cracked_a..i`, `lava_crack_floor_a/b`, `lava_crack_floor_diagonal_a/b`, `rune_circle_fragment_a..j` (⚠️ mảnh rời của 1 vòng tròn rune lớn ghép từ nhiều tile, cần tự ghép lại trong Tiled nếu muốn dùng nguyên vòng) |
 
 **Lưu ý cắt ảnh:** một vài piece bị bỏ qua vì là mảnh vỡ/nhiễu quá nhỏ không dùng được (chủ yếu ở `sanctuary/` do hoa văn rune chồng lấp làm gãy liên kết pixel khi tách). Nếu cần đúng nguyên vẹn phần đó, nên cắt tay lại từ `public/images/BaseMap/Ancient-Temple.png`.
-| `sanctuary/` | Map Boss — Thánh Điện Cổ | `background.png`, `arena_floor`, `stone_column`, `fire_brazier`, `rubble`, `dragon_relief`, `lava_crack`, `map_select_icon` (64×64, riêng) |
+| `sanctuary/` | Map 8 — Thánh Điện Cổ | `background.png`, `arena_floor`, `stone_column`, `fire_brazier`, `rubble`, `dragon_relief` (⚠️ tên cũ theo lore rồng sai — thật ra nên là root/tree relief, xem `art-refs/world/maps.md`), `lava_crack`, `map_select_icon` (64×64, riêng) |
 
 ---
 
