@@ -7,9 +7,18 @@ import { PLAYER_HOUSE, HOUSE_LEVEL_TEXTURES } from '../data/housePlacement'
 import { WELL_PLACEMENT, WELL_AUTO_WATER_RADIUS } from '../data/wellPlacement'
 import { FarmManager, type CropVisualStage, type FarmTileRuntime } from '../systems/FarmManager'
 import { TimeManager } from '../systems/TimeManager'
-import { InventoryManager } from '../systems/InventoryManager'
+import { inventoryManager } from '../systems/InventoryManager'
 import { resolvePolygonCollision } from '../systems/CollisionUtils'
 import { GameData } from '../data/DataLoader'
+import { FARM_EXIT_ZONES } from '../data/mapTransitions'
+import { checkExitZones, fadeOutToScene, fadeInScene } from '../systems/SceneTransition'
+import { placePortalAtZone } from '../systems/PortalVisual'
+import { syncCombatHudToRegistry } from '../systems/CombatHud'
+import { combatManager } from '../systems/CombatManager'
+import {
+  ROAST_CHICKEN_PLACEMENT,
+  ROAST_CHICKEN_INTERACT_RADIUS
+} from '../data/roastChickenPlacement'
 
 /** Nền luôn ở dưới cùng, không tham gia Y-sort với player/prop khác (xem hàm depth ở Player.ts). */
 const GROUND_DEPTH = -10000
@@ -47,6 +56,7 @@ const MOISTURE_OVERLAY_DEPTH = FARM_TILE_DEPTH + 0.1
 const MOISTURE_OVERLAY_TEXTURE = 'moisture_overlay'
 const WATER_FX_TEXTURE = 'water_droplet_fx'
 const WELL_TEXTURE = 'farm_well'
+const ROAST_CHICKEN_TEXTURE = 'roast_chicken'
 const BACKGROUND_KEY = 'farm_background'
 const BACKGROUND_NIGHT_KEY = 'farm_background_night'
 const FARM_TILE_TEXTURES: Record<FarmTileType, string> = {
@@ -111,6 +121,10 @@ const INVENTORY_SLOT_GAP = 6
 
 export class GameScene extends Phaser.Scene {
   private player!: Player
+  /** Khoá input di chuyển/tấn công trong lúc fade chuyển màn (Sprint 5) — đúng pattern `seedMenuOpen` nhưng lý
+   * do khoá khác nhau (đang fade thay vì đang mở menu). Bắt đầu `true` vì MỌI lần `create()` chạy đều fade-in
+   * (kể cả lần đầu boot game, không riêng gì lúc quay lại từ Bãi Tập Luyện/Đồng Cỏ), xem `fadeInScene()`. */
+  private isTransitioning = true
   private collisionPolygons: Phaser.Geom.Polygon[] = []
   private farmManager!: FarmManager
   /** Ảnh đất (untilled/tilled) của từng ô, theo `FarmTilePlacement.id` — cần giữ lại để đổi texture khi cuốc. */
@@ -121,6 +135,12 @@ export class GameScene extends Phaser.Scene {
   /** Mũi tên báo "khối đang tương tác được" (ô đất dưới chân, nhà khi đứng gần...) — xem `updateInteractionPointer()`. */
   private interactionPointer!: Phaser.GameObjects.Image
   private timeManager!: TimeManager
+  /** Gà Quay ở nông trại — vật hồi phục toàn phần đứng cố định, ăn tại chỗ bằng Enter khi đứng gần (xem
+   * `tryEatRoastChicken()`). Hết sau khi ăn, tự có lại vào sáng hôm sau (`dayStart`), giống nhịp giếng nước tự
+   * tưới — user yêu cầu "lúc nào quay về cũng thấy được", nghĩa là 1 nguồn hồi phục tái tạo, không phải item
+   * dùng 1 lần vĩnh viễn. */
+  private roastChickenImage!: Phaser.GameObjects.Image
+  private roastChickenAvailable = true
   /** Lớp phủ tối ban đêm — hình chữ nhật cố định theo camera (`setScrollFactor(0)`), chỉ đổi alpha, không phải
    * world object nên không cần theo dõi vị trí camera thủ công. */
   private nightOverlay!: Phaser.GameObjects.Rectangle
@@ -154,8 +174,9 @@ export class GameScene extends Phaser.Scene {
   private seedMenuPanelWidth = 0
   private seedMenuPanelHeight = 0
 
-  /** Túi đồ — xem `InventoryManager`. Mở/đóng bằng phím I, đứng yên player khi mở (giống menu hạt giống). */
-  private inventoryManager!: InventoryManager
+  /** Túi đồ — dùng thẳng singleton `inventoryManager` (import ở đầu file, xem giải thích lý do trong
+   * `InventoryManager.ts`), không tự giữ instance riêng. Mở/đóng bằng phím I, đứng yên player khi mở (giống
+   * menu hạt giống). */
   private inventoryOpen = false
   private inventoryContainer!: Phaser.GameObjects.Container
   private inventoryPanelWidth = 0
@@ -208,7 +229,12 @@ export class GameScene extends Phaser.Scene {
     super({ key: 'GameScene' })
   }
 
-  create() {
+  create(data: { spawnX?: number; spawnY?: number }) {
+    // `create()` chạy lại mỗi lần `scene.start('GameScene', ...)` được gọi (quay lại từ Bãi Tập Luyện/Đồng Cỏ)
+    // trên CÙNG 1 instance scene — field initializer `= true` chỉ chạy đúng 1 lần lúc Phaser tạo instance ban
+    // đầu, không tự reset lại mỗi lần `create()`. Phải gán tay ở đây để mỗi lần quay lại đều khoá input đúng
+    // trong lúc fade-in, không "kế thừa" giá trị `false` còn sót từ lần trước.
+    this.isTransitioning = true
     this.createShadowTexture()
     this.createInteractionPointerTexture()
     this.createMoistureOverlayTexture()
@@ -218,7 +244,6 @@ export class GameScene extends Phaser.Scene {
       .setDepth(INTERACTION_POINTER_DEPTH)
       .setVisible(false)
     this.createSeedMenu()
-    this.inventoryManager = new InventoryManager()
     this.createInventoryUI()
 
     // Nền map dùng thẳng ảnh minh hoạ toàn cảnh (đồng cỏ + đường mòn chia lô + suối/thác/ao đã vẽ sẵn) thay vì
@@ -251,17 +276,34 @@ export class GameScene extends Phaser.Scene {
 
     // Sprint 2 — cuốc đất/trồng cây/lớn theo thời gian. FarmManager chỉ quản lý STATE (không đụng rendering),
     // phải khởi tạo sau placeFarmTiles() vì placeFarmTiles() tạo soilImages map mà syncFarmVisuals() cần.
+    // CHỈ tạo mới lần ĐẦU TIÊN — `create()` chạy lại mỗi lần quay về Farm từ Bãi Tập Luyện/Đồng Cỏ (Sprint 5,
+    // trên CÙNG 1 instance scene, xem giải thích ở `isTransitioning`), tạo `FarmManager` mới mỗi lần sẽ xoá
+    // sạch toàn bộ tiến độ ô đất (cuốc/trồng/độ ẩm) đang có — bug thật phát hiện khi làm tính năng Gà Quay (cần
+    // đúng cơ chế "giữ trạng thái" này để biết gà đã ăn hay chưa). Visual (ảnh đất/cây) vẫn phải tạo lại mỗi lần
+    // vì Phaser tự huỷ toàn bộ GameObject của scene cũ khi `scene.start()` — chỉ riêng STATE thuần (không phải
+    // GameObject) mới cần giữ nguyên qua field của chính scene này.
     this.placeFarmTiles()
-    this.farmManager = new FarmManager(FARM_TILE_PLACEMENTS)
+    if (!this.farmManager) this.farmManager = new FarmManager(FARM_TILE_PLACEMENTS)
     this.createBulkActionsUI()
     this.placeFence()
     this.placeHouse()
     this.createWellTexture()
     this.placeWell()
+    this.placeRoastChicken()
+    // Cổng dịch chuyển sang Bãi Tập Luyện/Đồng Cỏ (Sprint 5) — vẽ cổng cho MỌI Exit Zone của Farm tự động,
+    // không hardcode riêng từng cổng (thêm map chiến đấu mới sau này chỉ cần thêm 1 phần tử vào
+    // `FARM_EXIT_ZONES`, cổng tự hiện ra không cần sửa `GameScene`).
+    for (const zone of FARM_EXIT_ZONES) placePortalAtZone(this, zone)
 
     // Sprint 3 — đồng hồ trong game (tách biệt hoàn toàn với giờ THỰC dùng để lớn cây ở FarmManager, xem
-    // comment trong TimeManager.ts). Overlay tối phủ theo camera (scrollFactor 0), không phải world object.
-    this.timeManager = new TimeManager()
+    // comment trong TimeManager.ts). CHỈ tạo mới lần đầu — cùng lý do với `farmManager` ở trên, tạo lại mỗi lần
+    // quay về Farm sẽ làm đồng hồ nhảy về 06:00 Ngày 1, mất hết thời gian đã trôi qua. Đăng ký listener
+    // `dayStart` cũng phải theo cùng điều kiện — nếu không sẽ cộng dồn thêm 1 listener MỚI mỗi lần quay về,
+    // khiến giếng tưới N lần lặp lại vào những sáng sau (N = số lần đã quay về Farm).
+    const isFirstTimeSetup = !this.timeManager
+    if (isFirstTimeSetup) this.timeManager = new TimeManager()
+    // Overlay tối phủ theo camera (scrollFactor 0), không phải world object — GameObject nên vẫn phải tạo lại
+    // mỗi lần dù timeManager giữ nguyên, khác nhau ở chỗ CHỈ instance TimeManager mới cần giữ.
     this.nightOverlay = this.add
       .rectangle(0, 0, this.scale.width, this.scale.height, 0x0a1a3f)
       .setOrigin(0, 0)
@@ -271,11 +313,12 @@ export class GameScene extends Phaser.Scene {
 
     // Giếng nước tự động tưới ô gần nó mỗi sáng — "mỗi sáng" ăn theo `dayStart` (mốc đêm->ngày thật, ~6h, xem
     // `TimeManager.computeIsNight()`), không phải `dayChange` (mốc nửa đêm 0h) vì "sáng" theo nghĩa thường
-    // (bình minh) khớp `dayStart` hơn hẳn. Đăng ký ở đây (không phải trong `placeWell()`) vì cần `timeManager`
-    // đã tồn tại trước đã.
-    this.timeManager.on('dayStart', () => this.autoWaterNearWell())
+    // (bình minh) khớp `dayStart` hơn hẳn.
+    if (isFirstTimeSetup) this.timeManager.on('dayStart', () => this.autoWaterNearWell())
 
-    this.player = new Player(this, 890, 430, 'women')
+    // Toạ độ spawn mặc định (890,430) khi vào Farm lần đầu (boot game) — `data.spawnX/spawnY` chỉ có giá trị
+    // khi quay lại từ Bãi Tập Luyện/Đồng Cỏ qua Exit Zone (xem `data/mapTransitions.ts`).
+    this.player = new Player(this, data?.spawnX ?? 890, data?.spawnY ?? 430, 'women')
 
     this.cameras.main.setBounds(0, 0, background.displayWidth, background.displayHeight)
     this.cameras.main.startFollow(this.player, true)
@@ -284,7 +327,12 @@ export class GameScene extends Phaser.Scene {
     // lần đầu đã có sẵn giá trị đúng, không cần chờ event 'changedata' bắn ra mới hiện chữ.
     this.selectSeed(this.selectedCropId)
     this.updateTimeHud()
+    syncCombatHudToRegistry(this)
     this.scene.launch('UIScene')
+
+    fadeInScene(this, () => {
+      this.isTransitioning = false
+    })
 
     // Q mở công cụ chỉnh tay vùng va chạm (EditorScene) — xem src/scenes/EditorScene.ts
     this.input.keyboard!.on('keydown-Q', (event: KeyboardEvent) => {
@@ -400,10 +448,22 @@ export class GameScene extends Phaser.Scene {
   update(_time: number, delta: number) {
     // Đứng yên hoàn toàn khi menu hạt giống/túi đồ/bảng công cụ nông trại đang mở (giống game farming tham
     // khảo) — không gọi player.update() nên cursors ←/→ (đang dùng để điều hướng menu) không vô tình làm player
-    // di chuyển theo.
-    if (!this.seedMenuOpen && !this.inventoryOpen && !this.bulkActionsOpen) {
+    // di chuyển theo. `isTransitioning` (Sprint 5, đang fade-in/out chuyển màn) khoá tương tự — đúng
+    // `docs/gameplay/mechanics.md` mục "Hệ thống Chuyển Màn": khoá input di chuyển/tấn công trong lúc fade.
+    if (
+      !this.seedMenuOpen &&
+      !this.inventoryOpen &&
+      !this.bulkActionsOpen &&
+      !this.isTransitioning
+    ) {
       this.player.update()
       this.checkPolygonCollisions(delta)
+
+      const exit = checkExitZones(this.player.x, this.player.y, FARM_EXIT_ZONES)
+      if (exit) {
+        this.isTransitioning = true
+        fadeOutToScene(this, exit.targetScene, exit.entryPoint)
+      }
     }
     this.farmManager.update(Date.now())
     this.syncFarmVisuals()
@@ -461,6 +521,21 @@ export class GameScene extends Phaser.Scene {
     const feetX = body.center.x
     const feetY = body.bottom
 
+    if (
+      this.roastChickenAvailable &&
+      Phaser.Math.Distance.Between(
+        feetX,
+        feetY,
+        ROAST_CHICKEN_PLACEMENT.x,
+        ROAST_CHICKEN_PLACEMENT.bottomY
+      ) < ROAST_CHICKEN_INTERACT_RADIUS
+    ) {
+      return {
+        x: ROAST_CHICKEN_PLACEMENT.x,
+        y: ROAST_CHICKEN_PLACEMENT.y - ROAST_CHICKEN_PLACEMENT.height / 2
+      }
+    }
+
     const tile = this.farmManager.findNearestTile(feetX, feetY, FARM_TILE_INTERACT_RADIUS)
     if (tile) return { x: tile.x, y: tile.y - tile.height / 2 }
 
@@ -486,16 +561,19 @@ export class GameScene extends Phaser.Scene {
     this.interactionPointer.setPosition(target.x, target.y - 6 + bounce).setVisible(true)
   }
 
-  /** Enter bấm khi menu đang mở = xác nhận hạt đang chọn rồi trồng. Enter bấm khi KHÔNG có menu = tìm ô đất
-   * GẦN NHẤT trong bán kính `FARM_TILE_INTERACT_RADIUS` (cùng điểm chân player dùng cho va chạm polygon:
-   * `body.center.x`, `body.bottom` — và cùng bán kính dùng cho con trỏ báo, nên "thấy trỏ" luôn đi kèm "bấm
-   * được") rồi cuốc đất (`empty`), mở menu chọn hạt (`tilled`), tưới nước (`planted`, chưa chín), thu hoạch
-   * (`ready`), hoặc dọn cây héo (`withered`) — không làm gì nếu không có ô nào đủ gần. */
+  /** Enter bấm khi menu đang mở = xác nhận hạt đang chọn rồi trồng. Enter bấm khi KHÔNG có menu = ưu tiên ăn Gà
+   * Quay nếu đang đứng đủ gần và còn (xem `tryEatRoastChicken()`), nếu không mới tìm ô đất GẦN NHẤT trong bán
+   * kính `FARM_TILE_INTERACT_RADIUS` (cùng điểm chân player dùng cho va chạm polygon: `body.center.x`,
+   * `body.bottom` — và cùng bán kính dùng cho con trỏ báo, nên "thấy trỏ" luôn đi kèm "bấm được") rồi cuốc đất
+   * (`empty`), mở menu chọn hạt (`tilled`), tưới nước (`planted`, chưa chín), thu hoạch (`ready`), hoặc dọn cây
+   * héo (`withered`) — không làm gì nếu không có ô nào đủ gần. */
   private interactWithFarmTile() {
     if (this.seedMenuOpen) {
       this.confirmSeedMenu()
       return
     }
+
+    if (this.tryEatRoastChicken()) return
 
     const body = this.player.body as Phaser.Physics.Arcade.Body
     const tile = this.farmManager.findNearestTile(
@@ -514,7 +592,7 @@ export class GameScene extends Phaser.Scene {
     } else if (tile.state === 'ready') {
       const result = this.farmManager.harvest(tile, this.timeManager.getHour())
       if (result) {
-        this.inventoryManager.addItem(result.cropId, result.quantity)
+        inventoryManager.addItem(result.cropId, result.quantity)
         this.playHarvestFx(result.cropId, result.quantity, tile.x, tile.y)
         this.refreshInventoryUI()
       }
@@ -996,6 +1074,48 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  /** Gà Quay — đặt cố định 1 chỗ trên nông trại, ăn tại chỗ bằng Enter khi đứng gần (xem `tryEatRoastChicken()`
+   * ở `interactWithFarmTile()`). User yêu cầu rõ: "lúc nào quay về cũng thấy được" nghĩa là chỉ cần RA MAP
+   * KHÁC rồi VÀO LẠI Farm là gà có ngay, KHÔNG phải chờ qua ngày hôm sau — khác hẳn `farmManager`/`timeManager`
+   * phía trên (những cái đó CỐ Ý giữ nguyên qua các lần `create()` lại). Ở đây ngược lại: `create()` chạy lại
+   * (dù lần đầu boot game hay quay về từ Bãi Tập Luyện/Đồng Cỏ) đều RESET thẳng về available — không đọc giá
+   * trị cũ như 2 cái kia. */
+  private placeRoastChicken() {
+    this.roastChickenAvailable = true
+    this.createRoastChickenTexture()
+    this.addGroundShadow(
+      ROAST_CHICKEN_PLACEMENT.x,
+      ROAST_CHICKEN_PLACEMENT.bottomY,
+      ROAST_CHICKEN_PLACEMENT.width * 0.9,
+      ROAST_CHICKEN_PLACEMENT.bottomY - 0.5
+    )
+    this.roastChickenImage = this.add
+      .image(ROAST_CHICKEN_PLACEMENT.x, ROAST_CHICKEN_PLACEMENT.y, ROAST_CHICKEN_TEXTURE)
+      .setDisplaySize(ROAST_CHICKEN_PLACEMENT.width, ROAST_CHICKEN_PLACEMENT.height)
+      .setDepth(ROAST_CHICKEN_PLACEMENT.bottomY)
+      .setVisible(true)
+  }
+
+  /** User yêu cầu: ăn hồi đầy HP/MP, mất sau khi ăn, có lại ngay khi rời map rồi quay lại (xem
+   * `placeRoastChicken()`). Trả về `true` nếu vừa ăn được (để `interactWithFarmTile()` biết mà return sớm,
+   * không rơi tiếp xuống nhánh xử lý ô đất). */
+  private tryEatRoastChicken(): boolean {
+    if (!this.roastChickenAvailable) return false
+    const body = this.player.body as Phaser.Physics.Arcade.Body
+    const distance = Phaser.Math.Distance.Between(
+      body.center.x,
+      body.bottom,
+      ROAST_CHICKEN_PLACEMENT.x,
+      ROAST_CHICKEN_PLACEMENT.bottomY
+    )
+    if (distance > ROAST_CHICKEN_INTERACT_RADIUS) return false
+
+    combatManager.fullRestore()
+    this.roastChickenAvailable = false
+    this.roastChickenImage.setVisible(false)
+    return true
+  }
+
   /** Bóng đổ dùng chung cho mọi prop tĩnh đứng trên mặt đất (hàng rào, nhà...) — dùng lại `SHADOW_TEXTURE` của
    * player để đồng bộ 1 kiểu bóng cho cả map. Đặt ở đúng đáy prop (world y trùng `bottomY` của prop đó), depth
    * thấp hơn prop 1 chút (giống cách Player.ts đặt shadow thấp hơn player) để không lẫn thứ tự vẽ. */
@@ -1115,6 +1235,7 @@ export class GameScene extends Phaser.Scene {
   /** Giếng nước tạm (vẽ bằng code, không cần asset riêng) — vòng đá xám tròn + mặt nước xanh bên trong, mái gỗ
    * nhỏ phía trên. Thay bằng sprite thật khi có, xem `art-refs/world/buildings.md` mục "Hồ Chứa Nước / Giếng
    * Làng" (đã có prompt sẵn, chưa gen ảnh). */
+
   private createWellTexture() {
     if (this.textures.exists(WELL_TEXTURE)) return
     const size = 40
@@ -1153,6 +1274,53 @@ export class GameScene extends Phaser.Scene {
 
     canvasTexture.refresh()
     this.textures.get(WELL_TEXTURE).setFilter(Phaser.Textures.FilterMode.LINEAR)
+  }
+
+  /** Gà Quay tạm (vẽ bằng code, không cần asset riêng) — thân bầu dục nâu vàng cắm que xiên, 2 đùi gà nhô ra 2
+   * bên, vài nét bóng sáng cho có độ ngậy. Placeholder, chưa có prompt art-refs nào cho vật phẩm này. */
+  private createRoastChickenTexture() {
+    if (this.textures.exists(ROAST_CHICKEN_TEXTURE)) return
+    const width = 40
+    const height = 34
+    const canvasTexture = this.textures.createCanvas(ROAST_CHICKEN_TEXTURE, width, height)
+    if (!canvasTexture) return
+    const ctx = canvasTexture.getContext()
+    const cx = width / 2
+    const cy = height / 2 + 2
+
+    // Que xiên gỗ xuyên qua thân, lộ 2 đầu.
+    ctx.strokeStyle = '#9c6a3a' // Wood Base, art-refs/theme.md
+    ctx.lineWidth = 2
+    ctx.beginPath()
+    ctx.moveTo(2, cy)
+    ctx.lineTo(width - 2, cy)
+    ctx.stroke()
+
+    // 2 đùi gà nhô ra 2 bên trước khi vẽ thân đè lên (nhìn như thân che gốc đùi).
+    ctx.fillStyle = '#C97C3D'
+    ctx.beginPath()
+    ctx.ellipse(cx - 13, cy + 6, 7, 5, 0.6, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.beginPath()
+    ctx.ellipse(cx + 13, cy + 6, 7, 5, -0.6, 0, Math.PI * 2)
+    ctx.fill()
+
+    // Thân chính (bầu dục nâu vàng roasted).
+    ctx.beginPath()
+    ctx.ellipse(cx, cy, 15, 11, 0, 0, Math.PI * 2)
+    ctx.fillStyle = '#D9974A'
+    ctx.fill()
+    ctx.lineWidth = 1.5
+    ctx.strokeStyle = '#8A5A26'
+    ctx.stroke()
+
+    // Vệt bóng sáng phía trên cho có độ ngậy/bóng dầu.
+    ctx.beginPath()
+    ctx.ellipse(cx - 4, cy - 5, 6, 3, -0.3, 0, Math.PI * 2)
+    ctx.fillStyle = 'rgba(255, 224, 168, 0.7)'
+    ctx.fill()
+
+    canvasTexture.refresh()
   }
 
   /** Tạo sẵn 1 lần UI túi đồ (ẩn ban đầu) — lưới cố định `INVENTORY_GRID_COLUMNS`×`INVENTORY_GRID_ROWS`, cùng
@@ -1262,7 +1430,7 @@ export class GameScene extends Phaser.Scene {
    * hoạch (để thấy số lượng mới ngay, không cần đóng/mở lại mới thấy). Ô nào không có item thì ẩn icon/text đi
    * (không destroy — object cố định, tái dùng liên tục, xem `createInventoryUI()`). */
   private refreshInventoryUI() {
-    const slots = this.inventoryManager.getSlots()
+    const slots = inventoryManager.getSlots()
     this.inventorySlotIcons.forEach((icon, index) => {
       const slot = slots[index]
       const text = this.inventorySlotTexts[index]
@@ -1561,7 +1729,7 @@ export class GameScene extends Phaser.Scene {
       if (tile.id < min || tile.id > max) continue
       const result = this.farmManager.harvest(tile, currentHour)
       if (!result) continue
-      this.inventoryManager.addItem(result.cropId, result.quantity)
+      inventoryManager.addItem(result.cropId, result.quantity)
       this.playHarvestFx(result.cropId, result.quantity, tile.x, tile.y)
       count++
     }

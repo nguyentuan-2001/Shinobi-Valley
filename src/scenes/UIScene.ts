@@ -6,25 +6,49 @@ export class UIScene extends Phaser.Scene {
   }
 
   create() {
-    // UI chạy song song với GameScene (không replace)
-    // Placeholder HUD
-    this.add.text(8, 8, 'HP: 500 / 500', {
+    // UI chạy song song với GameScene/TrainingGroundScene/GrasslandScene (không replace) — HP/MP/EXP giờ đọc
+    // THẬT từ `registry` (do `systems/CombatHud.ts` ghi vào, nguồn là singleton `CombatManager` sống xuyên suốt
+    // mọi scene, xem giải thích ở đó), không còn là số giả cố định như trước Sprint 5.
+    const hpText = this.add.text(8, 8, '', {
       fontSize: '14px',
       color: '#ffffff',
       fontFamily: 'monospace'
     })
-
-    this.add.text(8, 28, 'MP: 200 / 200', {
+    const mpText = this.add.text(8, 28, '', {
       fontSize: '14px',
       color: '#aaaaff',
       fontFamily: 'monospace'
     })
-
-    this.add.text(8, 48, 'Lv. 1 | EXP: 0 / 100', {
+    const levelText = this.add.text(8, 48, '', {
       fontSize: '14px',
       color: '#ffff88',
       fontFamily: 'monospace'
     })
+
+    const updateCombatHud = () => {
+      hpText.setText(
+        `HP: ${this.registry.get('playerHp') ?? 0} / ${this.registry.get('playerMaxHp') ?? 0}`
+      )
+      mpText.setText(
+        `MP: ${this.registry.get('playerMp') ?? 0} / ${this.registry.get('playerMaxMp') ?? 0}`
+      )
+      levelText.setText(
+        `Lv. ${this.registry.get('playerLevel') ?? 1} | EXP: ${this.registry.get('playerExp') ?? 0} / ${this.registry.get('playerExpToNext') ?? 100}`
+      )
+    }
+    updateCombatHud()
+    const combatHudKeys = [
+      'playerHp',
+      'playerMaxHp',
+      'playerMp',
+      'playerMaxMp',
+      'playerLevel',
+      'playerExp',
+      'playerExpToNext'
+    ]
+    const onCombatStatChange = () => updateCombatHud()
+    for (const key of combatHudKeys)
+      this.registry.events.on(`changedata-${key}`, onCombatStatChange)
 
     // Hạt giống đang chọn (Sprint 2, thay tạm cho hotbar/inventory thật ở Sprint 4) — GameScene ghi tên qua
     // `this.registry` (DataManager toàn cục dùng chung mọi scene), ở đây chỉ đọc + tự cập nhật khi đổi.
@@ -62,6 +86,8 @@ export class UIScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.registry.events.off('changedata-selectedSeedName', onSeedNameChange)
       this.registry.events.off('changedata-gameTimeText', onGameTimeChange)
+      for (const key of combatHudKeys)
+        this.registry.events.off(`changedata-${key}`, onCombatStatChange)
     })
   }
 }

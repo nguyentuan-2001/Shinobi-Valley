@@ -122,11 +122,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.shadow.setPosition(this.x, feetY)
     this.shadow.setDepth(feetY - 1)
 
-    if (Phaser.Input.Keyboard.JustDown(this.attackKey) && !this.isAttacking) {
-      this.isAttacking = true
-      this.setVelocity(0, 0)
-      this.play(`player_${this.gender}_attack`, true)
-    }
+    if (Phaser.Input.Keyboard.JustDown(this.attackKey)) this.startAttack()
 
     if (this.isAttacking) return
 
@@ -165,6 +161,51 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
     candidates.sort((a, b) => b.key.timeDown - a.key.timeDown)
     return candidates[0]?.facing ?? this.facing
+  }
+
+  /** Bắt đầu 1 lượt tấn công (animation + khoá di chuyển + emit `attack` cho scene check hitbox) — dùng chung
+   * cho CẢ đòn thường (Space, tự gọi trong `update()`, không truyền `payload` → multiplier mặc định 1) LẪN
+   * chiêu thức từ hotbar (Enter, scene tự gọi hàm này kèm `damageMultiplier` của chiêu đang chọn — xem
+   * `systems/SkillHotbar.ts`). Trả về `false` nếu đang tấn công dở (animation khoá) — nơi gọi (scene) dựa vào
+   * đây để biết chiêu KHÔNG ra được, tránh trừ MP cho 1 lượt đánh không xảy ra. */
+  /** Scene cần biết TRƯỚC khi trừ MP/bắt đầu cooldown chiêu (hotbar) — nếu animation đang khoá thì không được
+   * trừ gì cả (case 7/8 combat.md áp dụng đúng thời điểm, không phải trừ xong mới phát hiện đánh hụt). */
+  canAttack(): boolean {
+    return !this.isAttacking
+  }
+
+  startAttack(payload: { damageMultiplier?: number } = {}): boolean {
+    if (this.isAttacking) return false
+    this.isAttacking = true
+    this.setVelocity(0, 0)
+    this.play(`player_${this.gender}_attack`, true)
+    // Đánh dấu "vừa vung vũ khí" ngay lúc bắt đầu animation (không đợi animation chạy xong) — Sprint 5 chưa cần
+    // khớp chính xác frame nào trong animation là lúc lưỡi kiếm thật sự chạm tới (cần rig hitbox theo từng
+    // frame, việc của khi có animation thật đủ chi tiết), tính hit ngay lúc bấm cho đơn giản/phản hồi tức thời.
+    this.emit('attack', { damageMultiplier: payload.damageMultiplier ?? 1 })
+    return true
+  }
+
+  /** Vùng hitbox đòn đánh thường — 1 hình chữ nhật nhỏ đặt NGAY TRƯỚC mặt player theo hướng đang quay mặt
+   * (`facing`), dùng cho `Phaser.Geom.Rectangle.Overlaps()` so với `getBounds()` của Người Rơm/quái ở scene.
+   * Kích thước/khoảng đưa ra tạm ước lượng theo cỡ 1 ô Người Rơm/quái (~32px) — chưa cần rig theo asset vũ khí
+   * thật vì animation attack hiện chỉ có 1 bản quay mặt ra trước, không đổi theo hệ vũ khí. */
+  getAttackHitboxBounds(): Phaser.Geom.Rectangle {
+    const reach = 34
+    const size = 42
+    const offsets: Record<Facing, { x: number; y: number }> = {
+      front: { x: 0, y: reach },
+      back: { x: 0, y: -reach },
+      left: { x: -reach, y: 0 },
+      right: { x: reach, y: 0 }
+    }
+    const offset = offsets[this.facing]
+    return new Phaser.Geom.Rectangle(
+      this.x + offset.x - size / 2,
+      this.y + offset.y - size / 2,
+      size,
+      size
+    )
   }
 
   private updateAnimation(moving: boolean): void {

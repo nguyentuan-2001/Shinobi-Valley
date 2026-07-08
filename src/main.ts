@@ -2,8 +2,12 @@ import Phaser from 'phaser'
 import { BootScene } from './scenes/BootScene'
 import { PreloadScene } from './scenes/PreloadScene'
 import { GameScene } from './scenes/GameScene'
+import { TrainingGroundScene } from './scenes/TrainingGroundScene'
+import { GrasslandScene } from './scenes/GrasslandScene'
 import { EditorScene } from './scenes/EditorScene'
 import { UIScene } from './scenes/UIScene'
+import { combatManager } from './systems/CombatManager'
+import { inventoryManager } from './systems/InventoryManager'
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -27,7 +31,15 @@ const config: Phaser.Types.Core.GameConfig = {
     default: 'arcade',
     arcade: { gravity: { x: 0, y: 0 }, debug: false }
   },
-  scene: [BootScene, PreloadScene, GameScene, UIScene, EditorScene]
+  scene: [
+    BootScene,
+    PreloadScene,
+    GameScene,
+    TrainingGroundScene,
+    GrasslandScene,
+    UIScene,
+    EditorScene
+  ]
 }
 
 const game = new Phaser.Game(config)
@@ -37,4 +49,18 @@ const game = new Phaser.Game(config)
 // công, không cần thêm/xoá thủ công mỗi lần như trước.
 if (import.meta.env.DEV) {
   ;(window as unknown as { __game: Phaser.Game }).__game = game
+  // Singleton chiến đấu/túi đồ (Sprint 5) — expose thêm để `dev-check.cjs` verify EXP/gold/drop/HP thật mà
+  // không cần đào qua registry/scene internals mỗi lần.
+  ;(
+    window as unknown as {
+      __combatManager: typeof combatManager
+      __inventoryManager: typeof inventoryManager
+    }
+  ).__combatManager = combatManager
+  ;(
+    window as unknown as {
+      __combatManager: typeof combatManager
+      __inventoryManager: typeof inventoryManager
+    }
+  ).__inventoryManager = inventoryManager
 }
