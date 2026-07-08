@@ -17,7 +17,30 @@
       "Bash(find *)",
       "Bash(mkdir *)",
       "Bash(ls *)",
-      "Bash(magick *)"
+      "Bash(magick *)",
+      "Bash(powershell -Command \"Stop-Process -Id 52272,37440 -Force\")",
+      "Bash(yarn tsc *)",
+      "Bash(yarn format *)",
+      "Bash(node \"C:/Users/Admin/AppData/Local/Temp/claude/c--Project-Shinobi-Valley/4be0ef29-8108-444b-9745-dc2d531fdb98/scratchpad/test-growthbar2.cjs\")",
+      "Bash(node /tmp/zoom_bar2.cjs)",
+      "Bash(node \"C:/Users/Admin/AppData/Local/Temp/claude/c--Project-Shinobi-Valley/4be0ef29-8108-444b-9745-dc2d531fdb98/scratchpad/zoom_bar2.cjs\")",
+      "Bash(powershell -Command \"Stop-Process -Id 12068,6720 -Force\")",
+      "Bash(node \"C:/Users/Admin/AppData/Local/Temp/claude/c--Project-Shinobi-Valley/4be0ef29-8108-444b-9745-dc2d531fdb98/scratchpad/test-soilhide.cjs\")",
+      "Bash(powershell -Command \"Stop-Process -Id 29076,108132,124396,127740 -Force\")",
+      "Bash(node -e ' *)",
+      "Bash(node \"C:/Users/Admin/AppData/Local/Temp/claude/c--Project-Shinobi-Valley/4be0ef29-8108-444b-9745-dc2d531fdb98/scratchpad/test-farmlogic.cjs\")",
+      "Bash(node \"C:/Users/Admin/AppData/Local/Temp/claude/c--Project-Shinobi-Valley/4be0ef29-8108-444b-9745-dc2d531fdb98/scratchpad/test-farmlogic-visual.cjs\")",
+      "Bash(powershell -Command \"Stop-Process -Id 14296,2484 -Force\")",
+      "Bash(powershell -Command \"Stop-Process -Id 3480,28964 -Force\")",
+      "Bash(node -e \"const c=require\\('./public/data/crops.json'\\); console.log\\('total:', c.length\\); console.log\\(c.find\\(x=>x.id==='natures_essence'\\)\\)\")",
+      "Bash(node \"C:/Users/Admin/AppData/Local/Temp/claude/c--Project-Shinobi-Valley/4be0ef29-8108-444b-9745-dc2d531fdb98/scratchpad/test-natures-essence.cjs\")",
+      "Bash(powershell -Command \"Stop-Process -Id 30336,30672 -Force\")",
+      "Bash(node \"C:/Users/Admin/AppData/Local/Temp/claude/c--Project-Shinobi-Valley/4be0ef29-8108-444b-9745-dc2d531fdb98/scratchpad/test-bulk-actions.cjs\")",
+      "Bash(node \"C:/Users/Admin/AppData/Local/Temp/claude/c--Project-Shinobi-Valley/4be0ef29-8108-444b-9745-dc2d531fdb98/scratchpad/test-bulk-input-typing.cjs\")",
+      "Bash(node /tmp/checkdominput.cjs)",
+      "Bash(powershell -Command \"Stop-Process -Id 30660,12844,31844,31800 -Force\")",
+      "Bash(grep -iE \"\\\\.env|\\\\.key$|\\\\.pem$|credential|token|secret\")",
+      "Bash(git commit -m ' *)"
     ]
   }
 }
