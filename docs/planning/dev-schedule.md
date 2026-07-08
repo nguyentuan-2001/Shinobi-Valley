@@ -187,29 +187,31 @@ _(Roadmap: 20→14 cây (theo v1-scope), 5 map, boss, NPC, quest, crafting)_
 
 **Done when:** Đổi được cả 5 hệ vũ khí, dùng đủ 6 skill/hệ, status effect áp dụng và refresh đúng (không cộng dồn).
 
-### Sprint 12: Map 2-5 (Rừng Tre, Hang Động, Núi Tuyết, Rừng Thiêng) + cơ chế riêng từng map
+### Sprint 12: Map 2-7 (Đồng Cỏ→Rừng Cổ) + cơ chế riêng từng map
 
 **Size: L**
 
+**Quyết định kiến trúc map ngoài (chốt trong phiên trao đổi với user, tham khảo Ninja School Online/Ngọc Rồng Online):** Farm/Village dùng 1 ảnh nền tĩnh vẽ nguyên khối vì đủ nhỏ để thấy cả map. 6 map chiến đấu (Map 2-7) sẽ **KHÔNG** làm 1 ảnh khổng lồ duy nhất — chia mỗi map thành **nhiều khu vực/phòng nhỏ nối tiếp** (kích cỡ mỗi khu vực ~ tầm nhìn camera hiện tại của Farm), đi tới rìa khu vực thì chuyển sang khu vực kế (transition nhanh hoặc ghép liền trong 1 Tiled map lớn nếu muốn camera mở rộng tự nhiên). Mỗi khu vực dựng từ: layer nền trời/núi xa (đứng yên hoặc parallax chậm, dùng chung/tái sử dụng giữa các khu vực cùng map) + layer đất/tile foreground cuộn theo camera (build từ tile đã cắt sẵn trong `public/assets/tilesets/<map>/`, xem `docs/data/asset-manifest.md` mục 17 — hiện đang có sẵn nhưng CHƯA dùng tới, chỉ mới dùng ảnh `background.png` nguyên khối). Vài quái spawn rải rác mỗi khu vực (giống cách đặt vị trí ô đất ở `data/farmTiles.ts`), 1 khu vực riêng lớn hơn cuối map cho mini-boss. **Cơ chế đánh quái không đổi** — dùng lại đúng hệ combat Sprint 5 (Weapon + hitbox cận chiến, quái patrol/chase), logic entity không phụ thuộc map to/nhỏ hay 1 ảnh/nhiều tile. Giữ nguyên di chuyển top-down 4 hướng đã có — chỉ mượn kỹ thuật chia lớp nền của NRO/Ninja School, không mượn cơ chế camera/di chuyển góc nghiêng của họ.
+
 | Loại  | Việc cần làm                                                                                                                                                                        |
 | ----- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Code  | Loader map theo level-gate, cơ chế Hang Động (đèn lồng/lantern giới hạn vùng nhìn), Núi Tuyết (giảm move speed), Rừng Thiêng (corruption tile trừ 1HP/s trừ khi dùng Bùa Thanh Tẩy) |
-| Data  | `monsters.json` đầy đủ quái theo bảng chỉ số trong `data-schema.md` (~20 quái thường), item nguyên liệu theo zone trong `items.json`                                                |
-| Asset | 4 tileset/tilemap zone, ~15-18 sprite quái còn lại (32×32), icon Đèn lồng + Bùa Thanh Tẩy, theo `art-refs/enemies/monsters.md` + `art-refs/world/maps.md`                           |
+| Code  | Hệ thống khu vực/phòng nối tiếp + transition (xem quyết định kiến trúc trên), loader map theo level-gate, cơ chế Hang Động (đèn lồng/lantern giới hạn vùng nhìn), Núi Tuyết (giảm move speed), Rừng Thiêng (corruption tile trừ 1HP/s trừ khi dùng Bùa Thanh Tẩy) |
+| Data  | `monsters.json` đầy đủ quái theo bảng chỉ số trong `data-schema.md` (~24 quái thường + 1 quái cốt truyện Hoàng), item nguyên liệu theo zone trong `items.json`                                                |
+| Asset | Tileset/tilemap từng khu vực dựng từ tile đã cắt theo map, ~20 sprite quái còn lại (32×32) + 6 mini-boss (64×64), icon Đèn lồng + Bùa Thanh Tẩy, theo `art-refs/enemies/monsters.md` + `art-refs/world/maps.md` |
 
-**Done when:** Vào được cả 5 map theo đúng level-gate, cơ chế riêng từng map hoạt động (đo được: HP mất trong Rừng Thiêng nếu không có bùa, tối trong hang không có đèn).
+**Done when:** Vào được cả 6 map theo đúng level-gate, cơ chế riêng từng map hoạt động (đo được: HP mất trong Rừng Thiêng nếu không có bùa, tối trong hang không có đèn).
 
-### Sprint 13: 5 Mini-boss
+### Sprint 13: 6 Mini-boss
 
 **Size: M**
 
 | Loại  | Việc cần làm                                                                                                  |
 | ----- | ------------------------------------------------------------------------------------------------------------- |
 | Code  | Boss AI (nhiều đòn đánh cơ bản, có thể thêm 1 "enrage phase" ở % HP thấp), cổng vào arena boss (trigger/gate) |
-| Data  | `monsters.json` — 5 entry `is_boss: true`, 1 mini-boss mỗi map                                                |
-| Asset | 5 sprite boss 64×64, theo `art-refs/enemies/monsters.md`                                                      |
+| Data  | `monsters.json` — 6 entry `is_boss: true`, 1 mini-boss mỗi map (Map 2-7)                                                |
+| Asset | 6 sprite boss 64×64, theo `art-refs/enemies/monsters.md`                                                      |
 
-**Done when:** Đánh bại được cả 5 mini-boss, mỗi boss có ít nhất 1 pattern đánh khác quái thường.
+**Done when:** Đánh bại được cả 6 mini-boss, mỗi boss có ít nhất 1 pattern đánh khác quái thường.
 
 ### Sprint 14: Crafting (fixed + random) + cường hóa
 
