@@ -59,7 +59,7 @@ export class TrainingGroundScene extends Phaser.Scene {
 
     const spawnX = data?.spawnX ?? DEFAULT_SPAWN.x
     const spawnY = data?.spawnY ?? DEFAULT_SPAWN.y
-    this.player = new Player(this, spawnX, spawnY, 'women')
+    this.player = new Player(this, spawnX, spawnY, 'vegeta')
     this.player.on('attack', () => this.handlePlayerAttack())
 
     this.cameras.main.startFollow(this.player, true)

@@ -1,24 +1,35 @@
 import Phaser from 'phaser'
 
-export type Gender = 'men' | 'women'
+export type Gender = 'men' | 'women' | 'vegeta'
 type Facing = 'front' | 'back' | 'left' | 'right'
 
 const SPEED = 140
+/** `vegeta`: ghép từ 3 mảnh đầu/thân/chân rời (`public/assets/sprites/player/vegeta/raw/`, do user cung cấp) —
+ * cả 5 action đều dùng CHUNG đúng 1 kích thước cell (152×190) vì field `FRAME_SIZES` này chỉ nhận 1 size duy
+ * nhất cho toàn bộ giới tính (không tách theo action như `frameSizes` ở `PreloadScene.ts`), khác nếu để mỗi
+ * action 1 kích thước khác nhau (ảnh ghép thật ra có size hơi khác nhau mỗi action) thì nhân vật sẽ "nhảy" vị
+ * trí/bóng đổ mỗi lần đổi animation. */
 const FRAME_SIZES: Record<Gender, { width: number; height: number }> = {
   men: { width: 164, height: 213 },
-  women: { width: 162, height: 334 }
+  women: { width: 162, height: 334 },
+  vegeta: { width: 152, height: 190 }
 }
 
 /** Sprite gốc to hơn nhiều so với tile 32x32 (đặc biệt women, frame cao 334px) — co lại để nhân vật
- * cao khoảng 1.5-2 lần tile, tỉ lệ hợp lý với map. Mỗi giới tính scale khác nhau vì kích thước frame gốc khác nhau. */
+ * cao khoảng 1.5-2 lần tile, tỉ lệ hợp lý với map. Mỗi giới tính scale khác nhau vì kích thước frame gốc khác nhau.
+ * `vegeta`: 0.35 × 190 ≈ 66.5px, canh gần đúng chiều cao hiển thị của `women` (334×0.2 ≈ 66.8px) cho đồng bộ
+ * tỉ lệ giữa các nhân dạng chọn được. */
 const SPRITE_SCALE: Record<Gender, number> = {
   men: 0.38,
-  women: 0.2
+  women: 0.2,
+  vegeta: 0.35
 }
 
 /** Frame nào dùng cho animation đi + frame đứng yên (khi dừng ở hướng back/side) — mỗi giới tính 1 bộ asset khác nhau.
  * men: bản cũ 3 frame/hướng, 1 frame vẽ lệch hướng nên phải bỏ ra, chỉ dùng 2 frame còn lại.
- * women: bản mới 8 frame/hướng đã gen đúng chuẩn key-frame — dùng đủ toàn bộ. */
+ * women: bản mới 8 frame/hướng đã gen đúng chuẩn key-frame — dùng đủ toàn bộ.
+ * vegeta: chỉ ghép được đúng 2 frame/hướng (giới hạn số pose có trong 31 mảnh gốc) — dùng cả 2, đứng yên ở
+ * frame 0 (mỗi hướng đều lấy frame đầu làm dáng đứng yên hợp lý nhất trong 2 frame có). */
 interface WalkDirectionConfig {
   frames: number[] | 'all'
   stillFrame: number
@@ -33,6 +44,11 @@ const WALK_CONFIG: Record<Gender, Record<'front' | 'back' | 'side', WalkDirectio
     front: { frames: 'all', stillFrame: 2 },
     back: { frames: 'all', stillFrame: 2 },
     side: { frames: 'all', stillFrame: 2 }
+  },
+  vegeta: {
+    front: { frames: 'all', stillFrame: 0 },
+    back: { frames: 'all', stillFrame: 0 },
+    side: { frames: 'all', stillFrame: 0 }
   }
 }
 

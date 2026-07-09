@@ -352,7 +352,7 @@ export class GameScene extends Phaser.Scene {
       this,
       data?.spawnX ?? this.lastKnownPosition.x,
       data?.spawnY ?? this.lastKnownPosition.y,
-      'women'
+      'vegeta'
     )
 
     this.cameras.main.setBounds(0, 0, background.displayWidth, background.displayHeight)

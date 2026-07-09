@@ -136,10 +136,19 @@ export class PreloadScene extends Phaser.Scene {
         walk_back: { frameWidth: 162, frameHeight: 334 },
         walk_side: { frameWidth: 162, frameHeight: 334 },
         attack: { frameWidth: 170, frameHeight: 335 }
+      },
+      // Ghép từ 3 mảnh đầu/thân/chân rời — cả 5 action dùng chung đúng 1 cell size (152×190), xem giải thích ở
+      // `FRAME_SIZES` trong `Player.ts`.
+      vegeta: {
+        idle_front: { frameWidth: 152, frameHeight: 190 },
+        walk_front: { frameWidth: 152, frameHeight: 190 },
+        walk_back: { frameWidth: 152, frameHeight: 190 },
+        walk_side: { frameWidth: 152, frameHeight: 190 },
+        attack: { frameWidth: 152, frameHeight: 190 }
       }
     }
 
-    for (const gender of ['men', 'women'] as const) {
+    for (const gender of ['men', 'women', 'vegeta'] as const) {
       const base = `/assets/sprites/player/${gender}`
       for (const action of [
         'idle_front',

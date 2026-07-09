@@ -65,7 +65,7 @@ export class GrasslandScene extends Phaser.Scene {
 
     const spawnX = data?.spawnX ?? DEFAULT_SPAWN.x
     const spawnY = data?.spawnY ?? DEFAULT_SPAWN.y
-    this.player = new Player(this, spawnX, spawnY, 'women')
+    this.player = new Player(this, spawnX, spawnY, 'vegeta')
     this.player.on('attack', (payload: { damageMultiplier: number }) =>
       this.handlePlayerAttack(payload.damageMultiplier)
     )
