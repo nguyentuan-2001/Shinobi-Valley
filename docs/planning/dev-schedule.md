@@ -387,13 +387,13 @@ public/assets/
 
 Đánh dấu khi hoàn thành từng sprint:
 
-- [ ] Sprint 0 — Data pipeline & project structure
-- [ ] Sprint 1 — Player movement + tilemap nông trại
-- [ ] Sprint 2 — Hệ thống ô đất
-- [ ] Sprint 3 — Game Clock
-- [ ] Sprint 4 — Tưới nước, moisture, thu hoạch, Inventory
-- [ ] Sprint 5 — Combat cơ bản
-- [ ] Sprint 6 — Save/Load (chốt Alpha)
+- [x] Sprint 0 — Data pipeline & project structure
+- [x] Sprint 1 — Player movement + tilemap nông trại
+- [x] Sprint 2 — Hệ thống ô đất
+- [x] Sprint 3 — Game Clock
+- [x] Sprint 4 — Tưới nước, moisture, thu hoạch, Inventory
+- [x] Sprint 5 — Combat cơ bản
+- [x] Sprint 6 — Save/Load (chốt Alpha)
 - [ ] Sprint 7 — Đủ 14 cây + phân bón
 - [ ] Sprint 8 — Chăn nuôi
 - [ ] Sprint 9 — Câu cá

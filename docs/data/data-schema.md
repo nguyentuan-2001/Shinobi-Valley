@@ -105,6 +105,12 @@ Game sử dụng kiến trúc **Data Driven** — toàn bộ nội dung nằm tr
 
 ## armor.json
 
+> **Cập nhật (Sprint "Trang bị + Tiềm năng")**: thêm 4 field bonus (`atk_bonus`/`mp_bonus`/`move_speed_bonus`/
+> `luck_bonus`/`crit_bonus_percent`) so với bản gốc — bản gốc chỉ có `def`/`hp_bonus`, đủ cho `chest` nhưng
+> thiếu chỉ số chính của 5 slot còn lại theo bảng "Chỉ số gốc theo slot" trong `docs/gameplay/equipment.md`
+> (Bao tay: DEF+ATK, Giày: DEF+Move Speed, Nhẫn: Luck+Crit%, Dây chuyền: HP+MP, Mũ: DEF+HP). Mọi entry đều có
+> đủ field, mặc định `0` ở field không áp dụng cho slot đó.
+
 ```json
 {
   "id": "iron_chestplate",
@@ -113,6 +119,11 @@ Game sử dụng kiến trúc **Data Driven** — toàn bộ nội dung nằm tr
   "rank": "epic",
   "def": 18,
   "hp_bonus": 0,
+  "atk_bonus": 0,
+  "mp_bonus": 0,
+  "move_speed_bonus": 0,
+  "luck_bonus": 0,
+  "crit_bonus_percent": 0,
   "sub_stats": ["crit", "life_steal"],
   "craft_recipe": {
     "iron_ore": 15,
@@ -437,31 +448,45 @@ Record mẫu 1 chiêu **Passive** — `mp_cost`/`cooldown` luôn = 0 (không áp
 
 ## save_state.json
 
+> **⚠️ Cập nhật Sprint 6 (Save/Load thật)**: bản dưới đây khớp ĐÚNG implementation thật trong
+> `src/systems/SaveManager.ts`/`src/data/types.ts` (`SaveState`). Bản gốc phía trên (viết trước khi `FarmManager`
+> thật được dựng) dùng `x/y` + `moisture` tính sẵn cho `farm_tiles` — chưa từng khớp code, nay đổi sang lưu theo
+> `id` (khớp `FarmTilePlacement.id`) + mốc thời gian thực (`plantedAt`/`lastWateredAt`) để độ ẩm/thời gian lớn
+> tiếp tục tính đúng cả trong lúc tắt game (theo giờ THỰC đã trôi qua), thay vì lưu 1 số % đông cứng lúc lưu.
+> `fertilizer_applied` bỏ khỏi save (chưa có hệ phân bón thật, Sprint 7). Thêm 3 field mới hoàn toàn:
+> `inventory`, `game_time`, `player_position` — cũng là phần Sprint 6 mới lưu lần đầu.
+
 ```json
 {
   "player_id": "p001",
-  "gender": "male",
+  "gender": "female",
   "farm_tiles": [
     {
-      "x": 0, "y": 0,
+      "id": 0,
       "state": "planted",
-      "crop_id": "carrot",
-      "planted_at_timestamp": 1720000000,
-      "moisture": 85.5,
-      "fertilizer_applied": "basic",
-      "harvest_count_remaining": 1
+      "cropId": "carrot",
+      "plantedAt": 1720000000000,
+      "lastWateredAt": 1720000000000,
+      "harvestCountRemaining": 1,
+      "cycleHours": 6,
+      "isRegrowCycle": false
     }
   ],
-  "animals": [
-    {
-      "type": "chicken",
-      "pen_slot": 0,
-      "last_fed_timestamp": 1720000000,
-      "last_product_timestamp": 1720000000
-    }
+  "animals": [],
+  "buildings_built": [],
+  "farm_decorations": [],
+  "player_stats": {
+    "level": 1, "exp": 0, "exp_to_next": 100,
+    "hp": 500, "max_hp": 500, "mp": 200, "max_mp": 200,
+    "atk": 10, "def": 5, "move_speed": 100, "crit": 2, "attack_speed": 1.0, "luck": 1,
+    "gold": 0, "weapon_id": "iron_sword", "free_points": 0,
+    "equipped_armor": { "head": null, "chest": null, "hands": null, "feet": null, "ring": null, "necklace": null }
+  },
+  "inventory": [
+    { "itemId": "carrot", "quantity": 12 }
   ],
-  "buildings_built": ["chicken_coop", "silo", "greenhouse"],
-  "farm_decorations": []
+  "game_time": { "day": 3, "hour": 14.5 },
+  "player_position": { "scene": "GameScene", "x": 890, "y": 430 }
 }
 ```
 
@@ -470,15 +495,16 @@ Record mẫu 1 chiêu **Passive** — `mp_cost`/`cooldown` luôn = 0 (không áp
 | Trường | Kiểu | Mô tả |
 |---|---|---|
 | `player_id` | string | ID người chơi |
-| `gender` | enum | `male / female` — chọn 1 lần lúc tạo tài khoản/nhân vật, chỉ đổi model+animation, không đổi được sau (hoặc đổi mất phí, tùy quyết định sau), không ảnh hưởng stat/cốt truyện |
-| `farm_tiles` | array | Trạng thái từng ô đất trong nông trại |
+| `gender` | enum | `male / female` — chọn 1 lần lúc tạo tài khoản/nhân vật, chỉ đổi model+animation, không đổi được sau (hoặc đổi mất phí, tùy quyết định sau), không ảnh hưởng stat/cốt truyện. **Chưa có UI chọn giới tính thật** (Player luôn dùng bộ sprite `women`), field này hiện chưa có tác dụng. |
+| `farm_tiles` | array | Trạng thái từng ô đất — 1 phần tử/ô, khớp theo `id` (không theo `x/y`) |
 | `farm_tiles[].state` | enum | `empty / tilled / planted / ready / withered` |
-| `farm_tiles[].moisture` | float | Độ ẩm hiện tại của ô đất (50–100) |
-| `farm_tiles[].fertilizer_applied` | string\|null | Loại phân bón đang áp dụng |
-| `farm_tiles[].harvest_count_remaining` | int | Số lần thu hoạch còn lại |
-| `animals` | array | Danh sách gia súc đang nuôi |
-| `buildings_built` | string[] | Các công trình đã xây dựng trên nông trại |
-| `farm_decorations` | array | Các vật trang trí đã đặt trên nông trại |
+| `farm_tiles[].plantedAt` / `lastWateredAt` | timestamp\|null | Mốc `Date.now()` — độ ẩm/giai đoạn lớn tính LẠI từ đây mỗi lần đọc, không lưu số % sẵn |
+| `farm_tiles[].harvestCountRemaining` / `cycleHours` / `isRegrowCycle` | number/number/bool | Trạng thái chu kỳ multi-harvest, xem `FarmManager.ts` |
+| `animals` / `buildings_built` / `farm_decorations` | — | Chưa implement (Sprint 8+), luôn `[]` |
+| `player_stats` | object | Chỉ số chiến đấu runtime — xem `PlayerStats` trong `data/types.ts`. `free_points`/`equipped_armor` thêm ở Sprint "Trang bị + Tiềm năng"; `hp/mp/atk/def/move_speed/crit/attack_speed/luck` là chỉ số GỐC (chưa cộng bonus trang bị/vũ khí) — dùng `CombatManager.getTotal*()` để lấy số thật |
+| `inventory` | array | Toàn bộ ô túi đồ (`itemId`+`quantity`) — xem `InventoryManager.serialize()` |
+| `game_time` | object | Ngày/giờ đồng hồ game (`TimeManager`) — `hour` là số thực (có phần phút), không làm tròn |
+| `player_position` | object | Vị trí lưu lúc gần Farm nhất — **chỉ resume vào `GameScene`**, chưa hỗ trợ resume thẳng vào Bãi Tập Luyện/Đồng Cỏ dù lưu lúc đang đứng đó (xem `docs/planning/progress.md` Sprint 6) |
 
 ---
 
