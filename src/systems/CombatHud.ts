@@ -10,9 +10,9 @@ export function syncCombatHudToRegistry(scene: Phaser.Scene): void {
   const write = () => {
     const stats = combatManager.getStats()
     registry.set('playerHp', stats.hp)
-    registry.set('playerMaxHp', stats.max_hp)
+    registry.set('playerMaxHp', combatManager.getTotalMaxHp())
     registry.set('playerMp', stats.mp)
-    registry.set('playerMaxMp', stats.max_mp)
+    registry.set('playerMaxMp', combatManager.getTotalMaxMp())
     registry.set('playerLevel', stats.level)
     registry.set('playerExp', stats.exp)
     registry.set('playerExpToNext', stats.exp_to_next)

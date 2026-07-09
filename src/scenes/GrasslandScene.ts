@@ -11,6 +11,8 @@ import { combatManager } from '../systems/CombatManager'
 import { computeDamage } from '../systems/CombatSystem'
 import { SkillHotbar, bindSkillHotbarInput } from '../systems/SkillHotbar'
 import { TargetSelector } from '../systems/TargetSelector'
+import type { CharacterPanel } from '../systems/CharacterPanel'
+import { UIScene } from './UIScene'
 
 const MAP_WIDTH = 1000
 const MAP_HEIGHT = 750
@@ -19,10 +21,6 @@ const GROUND_TEXTURE = 'grassland_bg'
  * tạm dùng điểm spawn mặc định của Farm thay thế, xem giải thích đầy đủ ở `docs/planning/progress.md`. */
 const DEATH_RESPAWN_POINT = { x: 890, y: 430 }
 const DEFAULT_SPAWN = FARM_EXIT_ZONES[1].entryPoint
-/** Player chưa có crit chance thật trong `PlayerStats` (Sprint 5 không yêu cầu — xem `docs/gameplay/mechanics.md`
- * thuộc tính Crit chỉ cộng qua điểm thuộc tính, chưa làm UI phân bổ) — dùng tạm 1 số nhỏ cố định cho đòn thường
- * có cơ hội chí mạng thay vì luôn 0%, để case "Chí mạng" (case 1 combat.md) thật sự xảy ra được khi test. */
-const PLAYER_BASIC_ATTACK_CRIT_CHANCE = 0.05
 const MONSTER_SPAWNS: Array<{ x: number; y: number }> = [
   { x: 500, y: 300 },
   { x: 700, y: 500 }
@@ -82,7 +80,7 @@ export class GrasslandScene extends Phaser.Scene {
       .text(
         8,
         8,
-        'Map 2 — Đồng Cỏ (thử nghiệm). Space: đòn thường | 1-5: chọn chiêu, Enter: đánh chiêu | F2: đổi mục tiêu. Bước vào cổng dịch chuyển để quay lại Farm.',
+        'Map 2 — Đồng Cỏ (thử nghiệm). Space: đòn thường | 1-5: chọn chiêu, Enter: đánh chiêu | F2: đổi mục tiêu | C: bảng nhân vật. Bước vào cổng dịch chuyển để quay lại Farm.',
         {
           fontSize: '12px',
           color: '#ffffff',
@@ -111,7 +109,7 @@ export class GrasslandScene extends Phaser.Scene {
   update(_time: number, _delta: number) {
     this.hotbar.update()
 
-    if (!this.isTransitioning) {
+    if (!this.isTransitioning && !this.getCharacterPanel()?.isOpen) {
       this.player.update()
       for (const monster of this.monsters)
         monster.updateAi(this.player.x, this.player.y, this.time.now)
@@ -136,20 +134,18 @@ export class GrasslandScene extends Phaser.Scene {
 
   /** `skillMultiplier` = 1 cho đòn thường (Space), hoặc `damage_multiplier` của chiêu đang chọn trong hotbar
    * nếu đánh bằng Enter — nhân THÊM vào `weaponMultiplier` của vũ khí đang cầm (2 hệ số độc lập, xem
-   * `CombatManager.getWeaponMultiplier()`). */
+   * `CombatManager.getWeaponMultiplier()`). `getTotalCrit()` giờ đọc THẬT từ `PlayerStats.crit` + bonus trang
+   * bị/vũ khí (trước đây dùng tạm 1 số cố định vì `PlayerStats` chưa có field crit — nay đã có, xem
+   * `CombatManager.ts`). */
   private handlePlayerAttack(skillMultiplier: number) {
     const hitbox = this.player.getAttackHitboxBounds()
     const atk = combatManager.getTotalAtk()
     const totalMultiplier = skillMultiplier * combatManager.getWeaponMultiplier()
+    const critChance = combatManager.getTotalCrit() / 100
     for (const monster of this.monsters) {
       if (!monster.isAlive() || !Phaser.Geom.Rectangle.Overlaps(hitbox, monster.getBounds()))
         continue
-      const result = computeDamage(
-        atk,
-        totalMultiplier,
-        monster.getDef(),
-        PLAYER_BASIC_ATTACK_CRIT_CHANCE
-      )
+      const result = computeDamage(atk, totalMultiplier, monster.getDef(), critChance)
       monster.takeDamage(result.damage)
     }
   }
@@ -159,6 +155,12 @@ export class GrasslandScene extends Phaser.Scene {
     this.isTransitioning = true
     combatManager.respawnAtVillage()
     fadeOutToScene(this, FARM_SCENE_KEY, DEATH_RESPAWN_POINT)
+  }
+
+  /** Bảng nhân vật sống ở `UIScene`, không phải scene này — xem giải thích ở docstring field `characterPanel`
+   * trong `UIScene.ts` (lý do: thứ tự vẽ giữa scene khác nhau tính theo SCENE, không theo `depth`). */
+  private getCharacterPanel(): CharacterPanel | undefined {
+    return (this.scene.get('UIScene') as UIScene | null)?.characterPanel
   }
 
   private createGroundTexture() {

@@ -10,6 +10,8 @@ import { syncCombatHudToRegistry } from '../systems/CombatHud'
 import { SkillHotbar, bindSkillHotbarInput } from '../systems/SkillHotbar'
 import { combatManager } from '../systems/CombatManager'
 import { TargetSelector } from '../systems/TargetSelector'
+import type { CharacterPanel } from '../systems/CharacterPanel'
+import { UIScene } from './UIScene'
 
 const MAP_WIDTH = 700
 const MAP_HEIGHT = 550
@@ -70,7 +72,7 @@ export class TrainingGroundScene extends Phaser.Scene {
       .text(
         8,
         8,
-        'Bãi Tập Luyện — Space: đòn thường | 1-5: chọn chiêu, Enter: đánh chiêu | F2: đổi mục tiêu. Bước vào cổng dịch chuyển để quay lại Farm.',
+        'Bãi Tập Luyện — Space: đòn thường | 1-5: chọn chiêu, Enter: đánh chiêu | F2: đổi mục tiêu | C: bảng nhân vật. Bước vào cổng dịch chuyển để quay lại Farm.',
         {
           fontSize: '12px',
           color: '#ffffff',
@@ -89,7 +91,7 @@ export class TrainingGroundScene extends Phaser.Scene {
   update() {
     this.hotbar.update()
 
-    if (!this.isTransitioning) this.player.update()
+    if (!this.isTransitioning && !this.getCharacterPanel()?.isOpen) this.player.update()
 
     if (Phaser.Input.Keyboard.JustDown(this.f2Key)) this.targetSelector.cycleNext(this.dummies)
     const target = this.targetSelector.update(this.dummies, this.player.x, this.player.y)
@@ -117,6 +119,12 @@ export class TrainingGroundScene extends Phaser.Scene {
         dummy.takeHit()
       }
     }
+  }
+
+  /** Bảng nhân vật sống ở `UIScene`, không phải scene này — xem giải thích ở docstring field `characterPanel`
+   * trong `UIScene.ts` (lý do: thứ tự vẽ giữa scene khác nhau tính theo SCENE, không theo `depth`). */
+  private getCharacterPanel(): CharacterPanel | undefined {
+    return (this.scene.get('UIScene') as UIScene | null)?.characterPanel
   }
 
   /** Nền đất tạm (vẽ bằng code) — màu be/nâu nhạt phân biệt rõ với cỏ xanh của Farm, có vài đường kẻ ô mờ gợi ý

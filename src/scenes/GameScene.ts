@@ -19,6 +19,10 @@ import {
   ROAST_CHICKEN_PLACEMENT,
   ROAST_CHICKEN_INTERACT_RADIUS
 } from '../data/roastChickenPlacement'
+import { hasSaveGame, loadGame, saveGame } from '../systems/SaveManager'
+import type { SaveState } from '../data/types'
+import { UIScene } from './UIScene'
+import type { CharacterPanel } from '../systems/CharacterPanel'
 
 /** Nền luôn ở dưới cùng, không tham gia Y-sort với player/prop khác (xem hàm depth ở Player.ts). */
 const GROUND_DEPTH = -10000
@@ -27,9 +31,6 @@ const FARM_TILE_DEPTH = -1
 /** Cây trồng vẽ ngay trên lớp đất — vẫn thấp hơn player (player depth = y luôn > 0), không cần Y-sort riêng
  * vì cây coi như nằm phẳng trên mặt đất giống ô đất, không có chiều cao để player đi "sau" nó. */
 const CROP_DEPTH = FARM_TILE_DEPTH + 0.2
-/** Thanh trạng thái (độ ẩm/sản lượng + đếm giờ chín) treo phía trên ô đất đang có cây lớn — nổi trên cây nhưng
- * vẫn thấp hơn player (player depth = y luôn > 0), giống cách `CROP_DEPTH` nổi trên `FARM_TILE_DEPTH`. */
-const GROWTH_STATUS_DEPTH = CROP_DEPTH + 0.1
 /** Độ ẩm 50-100% quy đổi thẳng sang tỉ lệ đầy của thanh (50%→nửa thanh, 100%→đầy) — không remap lại khoảng, để
  * người chơi học được "thanh không bao giờ về hẳn 0, tưới là đầy lại" đúng như cơ chế thật. */
 const GROWTH_BAR_WIDTH_RATIO = 0.8
@@ -38,6 +39,12 @@ const SHADOW_TEXTURE = 'shadow_oval'
 const INTERACTION_POINTER_TEXTURE = 'interaction_pointer'
 /** Luôn vẽ trên cùng — con trỏ là chỉ dẫn UI gắn vào world, phải nổi trên mọi prop (nhà, hàng rào, cây...). */
 const INTERACTION_POINTER_DEPTH = 999_999
+/** Thanh trạng thái (độ ẩm/sản lượng + đếm giờ chín) treo phía trên ô đất đang có cây lớn — CHỈ hiện đúng ô
+ * đang trỏ vào (xem `syncGrowthStatusUI()`), nên player luôn đứng ngay sát/trên ô đó lúc thanh hiện. Ban đầu
+ * đặt thấp hơn player (`CROP_DEPTH + 0.1`, y hệt các layer đất/cây khác) khiến sprite player (cao hơn hẳn 1 ô
+ * đất) che mất luôn cả thanh — user phản hồi "text thời gian phải hiện trước người chứ". Đổi sang tier ngang
+ * con trỏ tương tác (nổi trên MỌI thứ trong world, kể cả player) vì cùng là chỉ dẫn UI gắn vào world. */
+const GROWTH_STATUS_DEPTH = INTERACTION_POINTER_DEPTH + 0.2
 /** Icon bay lên khi thu hoạch phải nổi TRÊN cả con trỏ tương tác — ô vừa hái vẫn còn trong bán kính tương tác
  * (đất chưa cuốc lại), nên con trỏ tiếp tục hiện đúng ngay tại đó cùng lúc; nếu thấp hơn depth con trỏ, hình
  * thoi vàng của con trỏ (22×26, gần kín trọn icon 24×24) sẽ che mất icon suốt lúc bay lên (bug thật gặp khi
@@ -45,12 +52,10 @@ const INTERACTION_POINTER_DEPTH = 999_999
 const HARVEST_FX_DEPTH = INTERACTION_POINTER_DEPTH + 0.5
 /** Menu chọn hạt giống phải nổi trên cả con trỏ tương tác. */
 const SEED_MENU_DEPTH = 1_000_000
-/** Bảng túi đồ phải nổi trên cả menu hạt giống — 2 bảng không mở cùng lúc trong thực tế, nhưng để độc lập theo
- * depth cho chắc, không phụ thuộc thứ tự tạo. */
-const INVENTORY_DEPTH = SEED_MENU_DEPTH + 1
-/** Bảng Công Cụ Nông Trại (cuốc/tưới/gieo/hái tất cả) — cũng không mở cùng lúc với 2 bảng trên, độc lập depth
- * cho chắc giống cách làm với `INVENTORY_DEPTH`. */
-const BULK_ACTIONS_DEPTH = INVENTORY_DEPTH + 1
+/** Bảng Công Cụ Nông Trại (cuốc/tưới/gieo/hái tất cả) — không mở cùng lúc với menu hạt giống trong thực tế,
+ * nhưng để độc lập theo depth cho chắc, không phụ thuộc thứ tự tạo. Bảng nhân vật (`CharacterPanel`, gộp cả
+ * Hành trang) dùng `PANEL_DEPTH` riêng cực cao trong file đó — không cần hằng số ở đây. */
+const BULK_ACTIONS_DEPTH = SEED_MENU_DEPTH + 1
 /** Overlay đất ẩm vẽ ngay trên ảnh đất, dưới cây trồng — đất ẩm không được che mất cây phía trên nó. */
 const MOISTURE_OVERLAY_DEPTH = FARM_TILE_DEPTH + 0.1
 const MOISTURE_OVERLAY_TEXTURE = 'moisture_overlay'
@@ -112,12 +117,6 @@ const PLANTABLE_CROP_IDS = [
  * lẻ để ô đang chọn luôn nằm giữa. Bề rộng bảng tính theo số này, không theo tổng số cây, nên thêm/bớt cây
  * trong `crops.json` sau này không làm bảng phình to thêm. */
 const SEED_MENU_VISIBLE_SLOTS = 7
-/** Lưới túi đồ cố định 6×5 = 30 ô — chưa cần giới hạn/mở rộng theo gameplay thật (mua túi lớn hơn...) vì Sprint
- * 4 chỉ cần "có chỗ chứa item thu hoạch, hiện đúng số lượng", chưa phải hệ thống quản lý túi đồ đầy đủ. */
-const INVENTORY_GRID_COLUMNS = 6
-const INVENTORY_GRID_ROWS = 5
-const INVENTORY_SLOT_SIZE = 40
-const INVENTORY_SLOT_GAP = 6
 
 export class GameScene extends Phaser.Scene {
   private player!: Player
@@ -135,6 +134,11 @@ export class GameScene extends Phaser.Scene {
   /** Mũi tên báo "khối đang tương tác được" (ô đất dưới chân, nhà khi đứng gần...) — xem `updateInteractionPointer()`. */
   private interactionPointer!: Phaser.GameObjects.Image
   private timeManager!: TimeManager
+  /** Toạ độ Farm gần nhất của player, đọc lại được kể cả sau khi scene này shutdown (`this.player` là
+   * GameObject, đã bị Phaser huỷ lúc đó — đọc trực tiếp `this.player.x/y` không an toàn). Cập nhật mỗi frame
+   * đang active (xem `update()`); là mặc định lúc boot lần đầu (nếu chưa từng lưu save) hoặc override bằng
+   * `savedGame.player_position` lúc load save — xem `saveProgress()`/`create()`. */
+  private lastKnownPosition = { x: 890, y: 430 }
   /** Gà Quay ở nông trại — vật hồi phục toàn phần đứng cố định, ăn tại chỗ bằng Enter khi đứng gần (xem
    * `tryEatRoastChicken()`). Hết sau khi ăn, tự có lại vào sáng hôm sau (`dayStart`), giống nhịp giếng nước tự
    * tưới — user yêu cầu "lúc nào quay về cũng thấy được", nghĩa là 1 nguồn hồi phục tái tạo, không phải item
@@ -174,17 +178,9 @@ export class GameScene extends Phaser.Scene {
   private seedMenuPanelWidth = 0
   private seedMenuPanelHeight = 0
 
-  /** Túi đồ — dùng thẳng singleton `inventoryManager` (import ở đầu file, xem giải thích lý do trong
-   * `InventoryManager.ts`), không tự giữ instance riêng. Mở/đóng bằng phím I, đứng yên player khi mở (giống
-   * menu hạt giống). */
-  private inventoryOpen = false
-  private inventoryContainer!: Phaser.GameObjects.Container
-  private inventoryPanelWidth = 0
-  private inventoryPanelHeight = 0
-  /** 1 icon + 1 text số lượng cho mỗi ô trong lưới cố định — cập nhật lại nội dung mỗi lần mở/thay đổi túi đồ,
-   * không tạo/xoá object động (khác cách làm `cropImages` vì số ô ở đây CỐ ĐỊNH, không đổi theo dữ liệu). */
-  private inventorySlotIcons: Phaser.GameObjects.Image[] = []
-  private inventorySlotTexts: Phaser.GameObjects.Text[] = []
+  /** Bảng nhân vật gộp 5 tab (Hành trang/Tiềm năng/Kỹ năng/Thông tin/Trang bị) — thay thế hẳn bảng túi đồ riêng
+   * cũ (Sprint 4), xem giải thích đầy đủ ở `systems/CharacterPanel.ts`. Sống ở `UIScene` (không phải scene
+   * này), xem `getCharacterPanel()` — KHÔNG giữ field instance riêng ở đây. */
 
   /** Bảng Công Cụ Nông Trại (cuốc/tưới/gieo/hái tất cả ô trong 1 khoảng ID, để trống 1 hoặc cả 2 ô nhập =
    * không giới hạn phía đó) — mở/đóng bằng phím **F**, đứng yên player khi mở (giống 2 bảng trên). 2 ô nhập số
@@ -244,7 +240,6 @@ export class GameScene extends Phaser.Scene {
       .setDepth(INTERACTION_POINTER_DEPTH)
       .setVisible(false)
     this.createSeedMenu()
-    this.createInventoryUI()
 
     // Nền map dùng thẳng ảnh minh hoạ toàn cảnh (đồng cỏ + đường mòn chia lô + suối/thác/ao đã vẽ sẵn) thay vì
     // ghép tile — xem lý do đổi từ tile-grid sang ảnh tĩnh ở docs/planning/progress.md. Cố tình không hardcode
@@ -282,8 +277,22 @@ export class GameScene extends Phaser.Scene {
     // đúng cơ chế "giữ trạng thái" này để biết gà đã ăn hay chưa). Visual (ảnh đất/cây) vẫn phải tạo lại mỗi lần
     // vì Phaser tự huỷ toàn bộ GameObject của scene cũ khi `scene.start()` — chỉ riêng STATE thuần (không phải
     // GameObject) mới cần giữ nguyên qua field của chính scene này.
+    // Sprint 6 — cũng là mốc DUY NHẤT để load save (đọc localStorage TRƯỚC khi tạo `FarmManager` mới, để nạp
+    // ngay lúc khởi tạo thay vì tạo rồi ghi đè lại). `isFirstTimeSetup` dùng chung cho toàn bộ state cần giữ
+    // nguyên qua các lần `create()` (farmManager/timeManager/load save) — tách biệt khỏi các field VISUAL luôn
+    // phải tạo lại (xem comment trên).
+    const isFirstTimeSetup = !this.farmManager
+    const savedGame = isFirstTimeSetup && hasSaveGame() ? loadGame() : null
     this.placeFarmTiles()
-    if (!this.farmManager) this.farmManager = new FarmManager(FARM_TILE_PLACEMENTS)
+    if (isFirstTimeSetup) {
+      this.farmManager = new FarmManager(FARM_TILE_PLACEMENTS)
+      if (savedGame) {
+        this.farmManager.loadState(savedGame.farm_tiles)
+        combatManager.loadStats(savedGame.player_stats)
+        inventoryManager.loadSlots(savedGame.inventory)
+        this.lastKnownPosition = { x: savedGame.player_position.x, y: savedGame.player_position.y }
+      }
+    }
     this.createBulkActionsUI()
     this.placeFence()
     this.placeHouse()
@@ -300,8 +309,10 @@ export class GameScene extends Phaser.Scene {
     // quay về Farm sẽ làm đồng hồ nhảy về 06:00 Ngày 1, mất hết thời gian đã trôi qua. Đăng ký listener
     // `dayStart` cũng phải theo cùng điều kiện — nếu không sẽ cộng dồn thêm 1 listener MỚI mỗi lần quay về,
     // khiến giếng tưới N lần lặp lại vào những sáng sau (N = số lần đã quay về Farm).
-    const isFirstTimeSetup = !this.timeManager
-    if (isFirstTimeSetup) this.timeManager = new TimeManager()
+    if (isFirstTimeSetup) {
+      this.timeManager = new TimeManager()
+      if (savedGame) this.timeManager.loadState(savedGame.game_time.day, savedGame.game_time.hour)
+    }
     // Overlay tối phủ theo camera (scrollFactor 0), không phải world object — GameObject nên vẫn phải tạo lại
     // mỗi lần dù timeManager giữ nguyên, khác nhau ở chỗ CHỈ instance TimeManager mới cần giữ.
     this.nightOverlay = this.add
@@ -316,9 +327,33 @@ export class GameScene extends Phaser.Scene {
     // (bình minh) khớp `dayStart` hơn hẳn.
     if (isFirstTimeSetup) this.timeManager.on('dayStart', () => this.autoWaterNearWell())
 
-    // Toạ độ spawn mặc định (890,430) khi vào Farm lần đầu (boot game) — `data.spawnX/spawnY` chỉ có giá trị
-    // khi quay lại từ Bãi Tập Luyện/Đồng Cỏ qua Exit Zone (xem `data/mapTransitions.ts`).
-    this.player = new Player(this, data?.spawnX ?? 890, data?.spawnY ?? 430, 'women')
+    // Sprint 6 — autosave theo "hành động quan trọng" ở phạm vi ngoài Farm (lên cấp/chết trong lúc đánh quái ở
+    // Bãi Tập Luyện/Đồng Cỏ) — đăng ký 1 LẦN DUY NHẤT lên singleton `combatManager` (sống xuyên suốt mọi scene,
+    // xem giải thích ở `CombatManager.ts`) để vẫn bắt được dù lúc đó `GameScene` không active, khác các listener
+    // scene-local khác trong file này. `saveProgress()` tự đọc lại `this.farmManager`/`this.timeManager` (vẫn
+    // còn nguyên trong bộ nhớ dù scene này đang dormant) nên gọi được bất cứ lúc nào, không cần scene active.
+    if (isFirstTimeSetup) {
+      combatManager.on('level-up', () => this.saveProgress())
+      combatManager.on('player-respawned', () => this.saveProgress())
+      // Bắt sự kiện đóng tab/tắt trình duyệt — lưới an toàn CHÍNH cho yêu cầu "tắt game mở lại giữ đúng trạng
+      // thái" (autosave định kỳ + theo hành động chỉ là lưới an toàn PHỤ, phòng khi crash/mất điện).
+      window.addEventListener('beforeunload', () => this.saveProgress())
+      // Autosave định kỳ (đúng dev-schedule.md: "theo khoảng thời gian HOẶC theo hành động quan trọng") — lưới
+      // an toàn cho trường hợp crash/mất điện, không thay thế các điểm lưu theo hành động ở nơi khác trong file.
+      this.time.addEvent({ delay: 30_000, loop: true, callback: () => this.saveProgress() })
+    }
+    // Rời Farm sang Bãi Tập Luyện/Đồng Cỏ cũng phải lưu ngay — đăng ký lại MỖI lần `create()` (khác các
+    // listener ở trên) vì `.once()` tự gỡ sau khi bắn 1 lần, cần có lại đúng 1 bản mỗi vòng vào Farm.
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.saveProgress())
+
+    // Toạ độ spawn: ưu tiên `data.spawnX/spawnY` (quay lại từ Bãi Tập Luyện/Đồng Cỏ qua Exit Zone) → vị trí đã
+    // lưu (`savedGame`, chỉ có giá trị đúng lần boot đầu) → mặc định (890,430) khi hoàn toàn chưa có gì.
+    this.player = new Player(
+      this,
+      data?.spawnX ?? this.lastKnownPosition.x,
+      data?.spawnY ?? this.lastKnownPosition.y,
+      'women'
+    )
 
     this.cameras.main.setBounds(0, 0, background.displayWidth, background.displayHeight)
     this.cameras.main.startFollow(this.player, true)
@@ -364,49 +399,50 @@ export class GameScene extends Phaser.Scene {
       this.moveSeedMenuSelection(1)
     })
 
-    // Esc: đóng menu hạt giống/túi đồ/bảng công cụ nông trại mà không làm gì khác — không có lối thoát nào khác
-    // một khi đã mở.
+    // Esc: đóng menu hạt giống/bảng nhân vật/bảng công cụ nông trại mà không làm gì khác — không có lối thoát
+    // nào khác một khi đã mở.
+    // Esc đóng menu hạt giống/bảng công cụ nông trại ở ĐÂY — riêng bảng nhân vật có Esc CỦA RIÊNG NÓ đăng ký
+    // trong `UIScene.create()` (nơi nó thật sự sống, xem `getCharacterPanel()`), không lặp lại ở đây.
     this.input.keyboard!.on('keydown-ESC', (event: KeyboardEvent) => {
       if (event.repeat) return
       if (this.seedMenuOpen) {
         event.preventDefault()
         this.closeSeedMenu()
-      } else if (this.inventoryOpen) {
-        event.preventDefault()
-        this.closeInventory()
       } else if (this.bulkActionsOpen) {
         event.preventDefault()
         this.closeBulkActions()
       }
     })
 
-    // I: mở/đóng túi đồ (Sprint 4) — không mở được khi menu hạt giống/bảng công cụ đang mở, tránh nhiều bảng
-    // cùng hiện chồng lên nhau (đều giữa màn hình, sẽ đè nhau nhìn rối).
+    // I: mở thẳng bảng nhân vật ở tab Hành trang (giữ đúng thói quen bấm cũ từ Sprint 4, trước khi có bảng
+    // nhân vật gộp 5 tab — xem `systems/CharacterPanel.ts`) — không mở được khi menu hạt giống/bảng công cụ
+    // đang mở, tránh nhiều bảng cùng hiện chồng lên nhau (đều giữa màn hình, sẽ đè nhau nhìn rối).
     this.input.keyboard!.on('keydown-I', (event: KeyboardEvent) => {
       if (event.repeat || this.seedMenuOpen || this.bulkActionsOpen) return
       event.preventDefault()
-      if (this.inventoryOpen) this.closeInventory()
-      else this.openInventory()
+      const panel = this.getCharacterPanel()
+      if (!panel) return
+      if (panel.isOpen) panel.close()
+      else panel.open('inventory')
     })
 
     // F: mở/đóng bảng Công Cụ Nông Trại (cuốc/tưới/gieo/hái tất cả) — cùng quy tắc loại trừ với I ở trên.
     this.input.keyboard!.on('keydown-F', (event: KeyboardEvent) => {
-      if (event.repeat || this.seedMenuOpen || this.inventoryOpen) return
+      if (event.repeat || this.seedMenuOpen || this.getCharacterPanel()?.isOpen) return
       event.preventDefault()
       if (this.bulkActionsOpen) this.closeBulkActions()
       else this.openBulkActions()
     })
 
-    // Click ra ngoài bảng khi menu hạt giống/túi đồ đang mở = đóng bảng đó; bảng Công Cụ Nông Trại thì click
-    // BÊN TRONG = bấm đúng 1 trong 4 nút (tự hit-test thủ công, xem `handleBulkActionsClick()` + giải thích lý
-    // do không dùng `.setInteractive()` trực tiếp), click ra ngoài = đóng, cùng hành vi Esc. `pointer.x/y` là
-    // toạ độ canvas, so trực tiếp được với vị trí container vì cả 3 bảng đều `setScrollFactor(0)` (cố định
-    // theo camera, không lệch theo world scroll).
+    // Click ra ngoài bảng khi menu hạt giống đang mở = đóng menu; bảng Công Cụ Nông Trại thì click BÊN TRONG =
+    // bấm đúng 1 trong 4 nút (tự hit-test thủ công, xem `handleBulkActionsClick()` + giải thích lý do không
+    // dùng `.setInteractive()` trực tiếp), click ra ngoài = đóng, cùng hành vi Esc. `pointer.x/y` là toạ độ
+    // canvas, so trực tiếp được với vị trí container vì mọi bảng đều `setScrollFactor(0)` (cố định theo
+    // camera, không lệch theo world scroll). Bảng nhân vật tự xử lý click của riêng nó ở `UIScene` (scene
+    // khác, input riêng — không đi qua handler này).
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
       if (this.seedMenuOpen && !this.isPointerInsideSeedMenu(pointer)) {
         this.closeSeedMenu()
-      } else if (this.inventoryOpen && !this.isPointerInsideInventory(pointer)) {
-        this.closeInventory()
       } else if (this.bulkActionsOpen) {
         if (this.isPointerInsideBulkActions(pointer)) this.handleBulkActionsClick(pointer)
         else this.closeBulkActions()
@@ -446,13 +482,13 @@ export class GameScene extends Phaser.Scene {
   }
 
   update(_time: number, delta: number) {
-    // Đứng yên hoàn toàn khi menu hạt giống/túi đồ/bảng công cụ nông trại đang mở (giống game farming tham
-    // khảo) — không gọi player.update() nên cursors ←/→ (đang dùng để điều hướng menu) không vô tình làm player
-    // di chuyển theo. `isTransitioning` (Sprint 5, đang fade-in/out chuyển màn) khoá tương tự — đúng
+    // Đứng yên hoàn toàn khi menu hạt giống/bảng nhân vật/bảng công cụ nông trại đang mở (giống game farming
+    // tham khảo) — không gọi player.update() nên cursors ←/→ (đang dùng để điều hướng menu) không vô tình làm
+    // player di chuyển theo. `isTransitioning` (Sprint 5, đang fade-in/out chuyển màn) khoá tương tự — đúng
     // `docs/gameplay/mechanics.md` mục "Hệ thống Chuyển Màn": khoá input di chuyển/tấn công trong lúc fade.
     if (
       !this.seedMenuOpen &&
-      !this.inventoryOpen &&
+      !this.getCharacterPanel()?.isOpen &&
       !this.bulkActionsOpen &&
       !this.isTransitioning
     ) {
@@ -464,6 +500,9 @@ export class GameScene extends Phaser.Scene {
         this.isTransitioning = true
         fadeOutToScene(this, exit.targetScene, exit.entryPoint)
       }
+      // Sprint 6 — ghi lại vị trí Farm gần nhất mỗi frame đang đi lại được (không ghi lúc đang fade/mở menu,
+      // vì lúc đó player không di chuyển nên vị trí không đổi) — dùng làm điểm lưu save, xem `saveProgress()`.
+      this.lastKnownPosition = { x: this.player.x, y: this.player.y }
     }
     this.farmManager.update(Date.now())
     this.syncFarmVisuals()
@@ -471,6 +510,41 @@ export class GameScene extends Phaser.Scene {
     this.timeManager.update(delta)
     this.updateDayNightVisuals()
     this.updateTimeHud()
+  }
+
+  /** Sprint 6 — chụp lại toàn bộ state cần lưu (farm/thời gian/stats/túi đồ/vị trí) thành 1 `SaveState` hoàn
+   * chỉnh. Tách riêng khỏi `saveProgress()` để dễ test (đọc snapshot mà không đụng localStorage). */
+  private getSaveSnapshot(): SaveState {
+    return {
+      player_id: 'p001',
+      gender: 'female',
+      farm_tiles: this.farmManager.serialize(),
+      animals: [],
+      buildings_built: [],
+      farm_decorations: [],
+      player_stats: { ...combatManager.getStats() },
+      inventory: inventoryManager.serialize(),
+      game_time: this.timeManager.serialize(),
+      player_position: { scene: 'GameScene', ...this.lastKnownPosition }
+    }
+  }
+
+  /** Sprint 6 — lưu ngay ra localStorage. Gọi được BẤT CỨ LÚC NÀO kể cả khi `GameScene` đang dormant (không
+   * active, ví dụ đang ở Bãi Tập Luyện/Đồng Cỏ) — mọi field đọc ở `getSaveSnapshot()` đều là STATE thuần
+   * (farmManager/timeManager) hoặc singleton (combatManager/inventoryManager), không có GameObject nào bị huỷ
+   * làm hỏng việc đọc. Xem toàn bộ điểm gọi ở `create()` (autosave định kỳ/beforeunload/SHUTDOWN/lên
+   * cấp/chết) và rải rác trong các hàm xử lý hành động nông trại (`interactWithFarmTile()`,
+   * `handleBulkActionsClick()`...). */
+  private saveProgress(): void {
+    saveGame(this.getSaveSnapshot())
+  }
+
+  /** Đọc `CharacterPanel` sống ở `UIScene` — xem giải thích lý do panel không sống ở scene này trong docstring
+   * field `characterPanel` của `UIScene.ts`. `undefined` nếu gọi quá sớm (`UIScene.create()` chưa chạy xong —
+   * chỉ có thể xảy ra đúng khung hình đầu tiên lúc boot game, trước khi bất kỳ phím/click nào kịp bắn ra) —
+   * mọi nơi gọi hàm này đều PHẢI tự xử lý `undefined` (dùng `?.`), không giả định luôn có sẵn. */
+  private getCharacterPanel(): CharacterPanel | undefined {
+    return (this.scene.get('UIScene') as UIScene | null)?.characterPanel
   }
 
   /** Đồng bộ mọi hiệu ứng ngày/đêm theo cùng 1 mốc `getNightFraction()` (0-1) — ảnh nền đêm hiện dần bằng alpha
@@ -568,12 +642,20 @@ export class GameScene extends Phaser.Scene {
    * (`empty`), mở menu chọn hạt (`tilled`), tưới nước (`planted`, chưa chín), thu hoạch (`ready`), hoặc dọn cây
    * héo (`withered`) — không làm gì nếu không có ô nào đủ gần. */
   private interactWithFarmTile() {
+    // Bảng nhân vật đang mở (đứng yên xem túi đồ/chỉ số) — không cho lỡ tay cuốc/tưới/hái gì trong lúc đó
+    // (menu hạt giống đã tự chặn bằng nhánh ngay dưới, bảng nhân vật thì chưa vì phím Enter là listener riêng,
+    // không đi qua điều kiện chặn di chuyển ở `update()`).
+    if (this.getCharacterPanel()?.isOpen) return
+
     if (this.seedMenuOpen) {
       this.confirmSeedMenu()
       return
     }
 
-    if (this.tryEatRoastChicken()) return
+    if (this.tryEatRoastChicken()) {
+      this.saveProgress()
+      return
+    }
 
     const body = this.player.body as Phaser.Physics.Arcade.Body
     const tile = this.farmManager.findNearestTile(
@@ -587,6 +669,7 @@ export class GameScene extends Phaser.Scene {
       this.farmManager.till(tile)
     } else if (tile.state === 'tilled') {
       this.openSeedMenu(tile)
+      return // mới MỞ menu, chưa có hành động nào thật sự cần lưu — lưu ở confirmSeedMenu() khi xác nhận trồng.
     } else if (tile.state === 'planted') {
       if (this.farmManager.water(tile)) this.playWaterFx(tile.x, tile.y)
     } else if (tile.state === 'ready') {
@@ -594,11 +677,13 @@ export class GameScene extends Phaser.Scene {
       if (result) {
         inventoryManager.addItem(result.cropId, result.quantity)
         this.playHarvestFx(result.cropId, result.quantity, tile.x, tile.y)
-        this.refreshInventoryUI()
       }
     } else if (tile.state === 'withered') {
       this.farmManager.clearWithered(tile)
     }
+    // Sprint 6 — lưu ngay sau hành động nông trại quan trọng (cuốc/tưới/hái/dọn héo). Gọi vô điều kiện dù có
+    // thể không thật sự đổi gì (ví dụ tưới ô chưa cần tưới) — ghi thừa vô hại, còn hơn thiếu 1 trường hợp.
+    this.saveProgress()
   }
 
   /** Hiệu ứng thu hoạch: icon vật phẩm (item icon, khác sprite `harvest` còn trên đất) hiện tại đúng vị trí ô
@@ -699,6 +784,7 @@ export class GameScene extends Phaser.Scene {
     const tile = this.farmManager.getTiles().find((t) => t.id === this.seedMenuTargetTileId)
     if (tile) this.farmManager.plant(tile, cropId)
     this.closeSeedMenu()
+    this.saveProgress() // Sprint 6 — vừa trồng xong, đúng "hành động quan trọng" cần lưu ngay.
   }
 
   /** Đổi hạt giống đang chọn (gọi khi xác nhận trong menu), đồng thời cập nhật tên hiển thị ở UIScene qua
@@ -842,6 +928,14 @@ export class GameScene extends Phaser.Scene {
    * tạo/đổi/xoá ảnh cây theo giai đoạn lớn hiện tại. So sánh texture key trước khi `setTexture()` để tránh
    * upload lại GPU texture mỗi frame khi không có gì đổi (90 ô, chạy mỗi frame, không nên làm dư việc). */
   private syncFarmVisuals() {
+    // User yêu cầu: thanh sản lượng/đếm giờ chỉ hiện ở ô đang TRỎ VÀO (đứng gần, đúng bán kính tương tác),
+    // không hiện tràn lan ở mọi ô đang trồng cùng lúc — tính 1 lần dùng lại cho cả vòng lặp, cùng bán kính/toạ
+    // độ với `findInteractionTarget()` để "thấy thanh hiện" và "Enter tương tác được" luôn khớp đúng 1 ô.
+    const body = this.player.body as Phaser.Physics.Arcade.Body
+    const pointedTileId =
+      this.farmManager.findNearestTile(body.center.x, body.bottom, FARM_TILE_INTERACT_RADIUS)?.id ??
+      null
+
     for (const tile of this.farmManager.getTiles()) {
       const soilImage = this.soilImages.get(tile.id)
       if (soilImage) {
@@ -913,16 +1007,20 @@ export class GameScene extends Phaser.Scene {
         this.moistureOverlays.delete(tile.id)
       }
 
-      this.syncGrowthStatusUI(tile, moisture)
+      this.syncGrowthStatusUI(tile, moisture, tile.id === pointedTileId)
     }
   }
 
-  /** Thanh trạng thái treo phía trên ô — chỉ hiện khi cây đang lớn (`planted`, chưa `ready`), ẩn ở mọi state
-   * khác (đã hái/chưa trồng/đã chín — chín rồi thì không còn gì để đếm ngược hay giữ ẩm nữa). Tạo 1 lần rồi tái
-   * dùng (giống `moistureOverlays`), chỉ cập nhật width/màu/text mỗi frame. */
-  private syncGrowthStatusUI(tile: FarmTileRuntime, moisture: number | null) {
+  /** Thanh trạng thái treo phía trên ô — chỉ hiện khi cây đang lớn (`planted`, chưa `ready`) VÀ player đang
+   * TRỎ VÀO đúng ô đó (`isPointedAt`, tính 1 lần ở `syncFarmVisuals()` theo đúng bán kính `findInteractionTarget()`
+   * dùng) — user phản hồi hiện tràn lan ở mọi ô đang trồng cùng lúc rối mắt, chỉ cần thấy đúng ô đang đứng gần.
+   * Ẩn ở mọi trường hợp còn lại (đã hái/chưa trồng/đã chín/không đứng gần). Tạo 1 lần rồi tái dùng (giống
+   * `moistureOverlays`) MỖI KHI đang hiện, chỉ cập nhật width/màu/text mỗi frame — huỷ hẳn khi ẩn (đứng ra xa)
+   * để không giữ object thừa cho hàng chục ô cùng lúc. */
+  private syncGrowthStatusUI(tile: FarmTileRuntime, moisture: number | null, isPointedAt: boolean) {
     const existing = this.growthStatusUI.get(tile.id)
-    const isGrowing = tile.state === 'planted' && tile.cropId !== null && tile.plantedAt !== null
+    const isGrowing =
+      isPointedAt && tile.state === 'planted' && tile.cropId !== null && tile.plantedAt !== null
 
     if (!isGrowing) {
       if (existing) {
@@ -935,8 +1033,13 @@ export class GameScene extends Phaser.Scene {
     }
 
     const barWidth = tile.width * GROWTH_BAR_WIDTH_RATIO
-    const barY = tile.y - tile.height / 2 - 9
-    const textY = barY - 8
+    // Đặt NGAY TRÊN con trỏ tương tác (user chỉnh lại ý — không phải "cao hơn đầu player" như lần sửa trước, mà
+    // đúng nghĩa "ngay trên con trỏ") — dùng lại chính công thức toạ độ Y của con trỏ ở `updateInteractionPointer()`
+    // (`target.y - 6`, bỏ qua `bounce` vì chỉ cần vị trí cơ sở) rồi lùi thêm 1 khoảng nhỏ lên trên, KHÔNG tính từ
+    // đỉnh đầu player (bản trước lùi tới -74 làm text trôi lên tận mép trên màn hình, quá xa cả con trỏ lẫn player).
+    const pointerBaseY = tile.y - tile.height / 2 - 6
+    const barY = pointerBaseY - 16
+    const textY = barY - 10
     const ui =
       existing ??
       (() => {
@@ -1323,149 +1426,6 @@ export class GameScene extends Phaser.Scene {
     canvasTexture.refresh()
   }
 
-  /** Tạo sẵn 1 lần UI túi đồ (ẩn ban đầu) — lưới cố định `INVENTORY_GRID_COLUMNS`×`INVENTORY_GRID_ROWS`, cùng
-   * kiểu bảng xanh ngọc/viền sáng với menu hạt giống (`createSeedMenu()`) cho đồng bộ UI, dù panel khác hẳn về
-   * layout (lưới nhiều ô, không phải 1 dải icon trượt). Icon dùng thẳng item icon (`crop_<id>_item`) đã
-   * preload — khung từng ô vẽ bằng code (đặt tại đây làm placeholder), đổi qua khung thật khi có
-   * `ui/frames/item_slot` từ `art-refs/ui/ui.md`. */
-  private createInventoryUI() {
-    const slotSize = INVENTORY_SLOT_SIZE
-    const gap = INVENTORY_SLOT_GAP
-    const paddingX = 16
-    const paddingY = 14
-    const columns = INVENTORY_GRID_COLUMNS
-    const rows = INVENTORY_GRID_ROWS
-    const slotCount = columns * rows
-
-    const gridWidth = columns * slotSize + (columns - 1) * gap
-    const gridHeight = rows * slotSize + (rows - 1) * gap
-    this.inventoryPanelWidth = gridWidth + paddingX * 2
-    this.inventoryPanelHeight = gridHeight + paddingY * 2 + 24 // +24 chỗ cho tiêu đề trên cùng
-
-    const panel = this.add.graphics()
-    panel.fillStyle(0x123a3f, 0.92)
-    panel.fillRoundedRect(
-      -this.inventoryPanelWidth / 2,
-      -this.inventoryPanelHeight / 2,
-      this.inventoryPanelWidth,
-      this.inventoryPanelHeight,
-      14
-    )
-    panel.lineStyle(2, 0x9fe8d8, 0.9)
-    panel.strokeRoundedRect(
-      -this.inventoryPanelWidth / 2,
-      -this.inventoryPanelHeight / 2,
-      this.inventoryPanelWidth,
-      this.inventoryPanelHeight,
-      14
-    )
-
-    const title = this.add
-      .text(0, -this.inventoryPanelHeight / 2 + 14, 'Túi Đồ', {
-        fontSize: '14px',
-        color: '#ffffff',
-        fontFamily: 'monospace',
-        fontStyle: 'bold'
-      })
-      .setOrigin(0.5)
-
-    const gridStartX = -gridWidth / 2 + slotSize / 2
-    const gridStartY = -this.inventoryPanelHeight / 2 + 24 + paddingY + slotSize / 2 - 4
-
-    const slotFrames: Phaser.GameObjects.Rectangle[] = []
-    this.inventorySlotIcons = []
-    this.inventorySlotTexts = []
-    for (let index = 0; index < slotCount; index++) {
-      const col = index % columns
-      const row = Math.floor(index / columns)
-      const x = gridStartX + col * (slotSize + gap)
-      const y = gridStartY + row * (slotSize + gap)
-
-      slotFrames.push(
-        this.add.rectangle(x, y, slotSize, slotSize, 0x1a4a50, 0.7).setStrokeStyle(1, 0x9fe8d8, 0.6)
-      )
-      this.inventorySlotIcons.push(
-        this.add
-          .image(x, y, '__DEFAULT')
-          .setDisplaySize(slotSize * 0.72, slotSize * 0.72)
-          .setVisible(false)
-      )
-      this.inventorySlotTexts.push(
-        this.add
-          .text(x + slotSize / 2 - 3, y + slotSize / 2 - 3, '', {
-            fontSize: '11px',
-            color: '#ffffff',
-            fontFamily: 'monospace'
-          })
-          .setOrigin(1, 1)
-      )
-    }
-
-    this.inventoryContainer = this.add
-      .container(this.scale.width / 2, this.scale.height / 2, [
-        panel,
-        title,
-        ...slotFrames,
-        ...this.inventorySlotIcons,
-        ...this.inventorySlotTexts
-      ])
-      .setScrollFactor(0)
-      .setDepth(INVENTORY_DEPTH)
-      .setVisible(false)
-  }
-
-  private openInventory() {
-    this.inventoryOpen = true
-    this.refreshInventoryUI()
-    this.inventoryContainer.setVisible(true)
-    ;(this.player.body as Phaser.Physics.Arcade.Body).setVelocity(0, 0)
-  }
-
-  private closeInventory() {
-    this.inventoryOpen = false
-    this.inventoryContainer.setVisible(false)
-  }
-
-  /** Đổ lại toàn bộ nội dung túi đồ vào đúng số ô cố định đã tạo sẵn — gọi khi mở túi hoặc ngay sau khi thu
-   * hoạch (để thấy số lượng mới ngay, không cần đóng/mở lại mới thấy). Ô nào không có item thì ẩn icon/text đi
-   * (không destroy — object cố định, tái dùng liên tục, xem `createInventoryUI()`). */
-  private refreshInventoryUI() {
-    const slots = inventoryManager.getSlots()
-    this.inventorySlotIcons.forEach((icon, index) => {
-      const slot = slots[index]
-      const text = this.inventorySlotTexts[index]
-      if (!slot) {
-        icon.setVisible(false)
-        text.setText('')
-        return
-      }
-      // Item icon của mỗi cây có kích thước GỐC khác hẳn nhau (giống bug đã gặp ở icon menu hạt giống) —
-      // `setTexture()` không tự giữ display size cũ, PHẢI set lại mỗi lần đổi texture, không thì icon hiện to
-      // lộn xộn theo đúng kích thước ảnh gốc (bug thật gặp khi verify bằng Puppeteer — carrot.png to lớn hơn cả
-      // panel).
-      icon
-        .setTexture(this.cropItemTextureKey(slot.itemId))
-        .setDisplaySize(INVENTORY_SLOT_SIZE * 0.72, INVENTORY_SLOT_SIZE * 0.72)
-        .setVisible(true)
-      text.setText(String(slot.quantity))
-    })
-  }
-
-  /** `pointer.x/y` (toạ độ canvas) có nằm trong vùng bảng túi đồ hay không — cùng cách làm với
-   * `isPointerInsideSeedMenu()`, panel này cũng `setScrollFactor(0)` nên so trực tiếp toạ độ canvas được. */
-  private isPointerInsideInventory(pointer: Phaser.Input.Pointer): boolean {
-    const halfWidth = this.inventoryPanelWidth / 2
-    const halfHeight = this.inventoryPanelHeight / 2
-    const cx = this.inventoryContainer.x
-    const cy = this.inventoryContainer.y
-    return (
-      pointer.x >= cx - halfWidth &&
-      pointer.x <= cx + halfWidth &&
-      pointer.y >= cy - halfHeight &&
-      pointer.y <= cy + halfHeight
-    )
-  }
-
   /** Tạo sẵn 1 lần bảng Công Cụ Nông Trại (ẩn ban đầu) — cùng kiểu bảng xanh ngọc/viền sáng với 2 bảng trên
    * cho đồng bộ UI. 2 ô nhập số (`bulkFromInput`/`bulkToInput`) là DOM Element thật (input HTML đè lên canvas,
    * xem comment ở khai báo field) — tắt hẳn bàn phím Phaser lúc đang gõ (`focus`/`blur`) để không vô tình bắn
@@ -1670,6 +1630,7 @@ export class GameScene extends Phaser.Scene {
         localY <= buttonY + height / 2
       if (insideButton) action()
     })
+    this.saveProgress() // Sprint 6 — cả 4 nút đều là hành động quan trọng (thao tác hàng loạt), lưu ngay sau đó.
   }
 
   /** Đọc khoảng ID từ 2 ô nhập — ô trống (hoặc không phải số) coi như "không giới hạn" phía đó, đúng yêu cầu
@@ -1733,7 +1694,6 @@ export class GameScene extends Phaser.Scene {
       this.playHarvestFx(result.cropId, result.quantity, tile.x, tile.y)
       count++
     }
-    if (count > 0) this.refreshInventoryUI()
     this.bulkStatusText.setText(`Đã thu hoạch ${count} ô`)
   }
 }

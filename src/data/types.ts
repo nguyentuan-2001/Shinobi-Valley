@@ -75,6 +75,11 @@ export interface Weapon {
   sub_stats: string[]
 }
 
+/** Trang bị (armor) — Sprint "Trang bị + Tiềm năng" mở rộng thêm 4 field bonus so với schema gốc trong
+ * `docs/data/data-schema.md` (trước đó chỉ có `def`/`hp_bonus`, đủ cho slot `chest`). Theo bảng "Chỉ số gốc
+ * theo slot" trong `docs/gameplay/equipment.md`, mỗi slot có 1-2 chỉ số chính khác nhau (Bao tay: DEF+ATK,
+ * Giày: DEF+Move Speed, Nhẫn: Luck+Crit%, Dây chuyền: HP+MP) — 4 field mới đều mặc định 0, chỉ khác 0 ở đúng
+ * slot liên quan (không dùng `Partial`/optional để khỏi phải `?? 0` rải rác mọi nơi tính tổng). */
 export interface Armor {
   id: string
   name: string
@@ -82,6 +87,13 @@ export interface Armor {
   rank: ItemRank
   def: number
   hp_bonus: number
+  atk_bonus: number
+  mp_bonus: number
+  move_speed_bonus: number
+  luck_bonus: number
+  /** % Chí mạng cộng thêm — đặt tên khác `crit_bonus` (đã dùng cho field tương ứng bên `Weapon`) chỉ để rõ
+   * nghĩa hơn khi đọc code tính tổng ở `CombatManager`, giá trị/ý nghĩa giống nhau. */
+  crit_bonus_percent: number
   sub_stats: string[]
   craft_recipe: Record<string, number>
   unlock_level: number
@@ -252,15 +264,22 @@ export interface GameEvent {
   event_boss: EventBoss
 }
 
-export interface FarmTile {
-  x: number
-  y: number
+/** Trạng thái lưu lại của 1 ô đất — Sprint 6. Khớp 1-1 với field runtime thật của `FarmManager.FarmTileRuntime`
+ * (trừ `x/y/width/height/tileType`, là metadata vị trí CỐ ĐỊNH từ `farmTiles.ts`, không cần lưu vì luôn dựng
+ * lại giống nhau từ placement — chỉ `id` là đủ để khớp lại đúng ô khi load). Lưu thẳng `plantedAt`/
+ * `lastWateredAt` (mốc thời gian thực, không lưu % `moisture` tính sẵn) để cây tiếp tục lớn/khô đúng theo giờ
+ * thực đã trôi qua kể cả trong lúc tắt game — khớp đúng thiết kế farming.md "mọi thời gian tính bằng giờ
+ * thực". **Khác với schema gốc trong `docs/data/data-schema.md` (dùng `x/y`+`moisture` tính sẵn)** — schema đó
+ * viết trước khi `FarmManager` thật được dựng, chưa từng khớp implementation, xem `docs/planning/progress.md`. */
+export interface FarmTileSaveState {
+  id: number
   state: FarmTileState
-  crop_id: string | null
-  planted_at_timestamp: number | null
-  moisture: number
-  fertilizer_applied: string | null
-  harvest_count_remaining: number
+  cropId: string | null
+  plantedAt: number | null
+  lastWateredAt: number | null
+  harvestCountRemaining: number
+  cycleHours: number
+  isRegrowCycle: boolean
 }
 
 export interface AnimalState {
@@ -270,8 +289,27 @@ export interface AnimalState {
   last_product_timestamp: number
 }
 
-/** Chỉ số chiến đấu runtime của người chơi — Sprint 5. `weapon_id` là vũ khí đang cầm (chưa có hệ thống
- * trang bị/inventory vũ khí thật nên tạm cố định 1 giá trị, đổi tay khi Sprint 11 làm hệ đổi class tại nhà). */
+/** Vị trí + map hiện tại lúc lưu — Sprint 6 chỉ hỗ trợ resume vào lại `GameScene` (Farm), KHÔNG resume thẳng
+ * vào Bãi Tập Luyện/Đồng Cỏ dù đang lưu lúc ở đó (đơn giản hoá hợp lý theo đúng "Done when" Sprint 6 chỉ yêu
+ * cầu giữ đúng farm + inventory + stats, không yêu cầu giữ đúng map chiến đấu đang đứng) — `scene` hiện luôn là
+ * `'GameScene'`, giữ field riêng để mở rộng khi cần resume đa map thật sau này. */
+export interface PlayerPositionState {
+  scene: string
+  x: number
+  y: number
+}
+
+export interface GameTimeState {
+  day: number
+  hour: number
+}
+
+/** Chỉ số chiến đấu runtime của người chơi — Sprint 5, mở rộng thêm ở Sprint "Trang bị + Tiềm năng"
+ * (`move_speed/crit/attack_speed/luck/free_points/equipped_armor`, theo đúng `docs/gameplay/equipment.md` +
+ * `docs/planning/progression.md`). `weapon_id` là vũ khí đang cầm — đổi qua `CombatManager.equipWeapon()`.
+ * **`max_hp`/`max_mp`/`atk`/`def`/`move_speed`/`crit`/`attack_speed`/`luck` là chỉ số GỐC (chưa cộng bonus
+ * trang bị)** — tổng thật dùng cho combat/HUD phải qua `CombatManager.getTotal*()` (cộng thêm vũ khí +
+ * `equipped_armor`), không đọc thẳng field này ở ngoài `CombatManager`. */
 export interface PlayerStats {
   level: number
   exp: number
@@ -282,16 +320,32 @@ export interface PlayerStats {
   max_mp: number
   atk: number
   def: number
+  move_speed: number
+  /** % Chí mạng gốc (chưa cộng bonus vũ khí/nhẫn) — đơn vị %, vd `2` = 2%. */
+  crit: number
+  attack_speed: number
+  luck: number
   gold: number
   weapon_id: string
+  /** Điểm thuộc tính tự do CHƯA phân bổ (10 điểm/lần lên cấp, xem `docs/planning/progression.md`) — trừ dần
+   * mỗi lần `CombatManager.allocatePoint()` thành công. */
+  free_points: number
+  /** Item đang mặc ở từng slot (`null` = trống) — key khớp `ArmorSlot`, đổi qua `CombatManager.equipArmor()`. */
+  equipped_armor: Record<ArmorSlot, string | null>
 }
 
 export interface SaveState {
   player_id: string
   gender: Gender
-  farm_tiles: FarmTile[]
+  farm_tiles: FarmTileSaveState[]
   animals: AnimalState[]
   buildings_built: string[]
   farm_decorations: unknown[]
   player_stats: PlayerStats
+  /** Túi đồ — Sprint 6. Kiểu tối giản (không import `InventorySlot` từ `systems/InventoryManager` để giữ
+   * `data/types.ts` không phụ thuộc ngược vào `systems/`) — `InventorySlot` thật khớp cấu trúc này 1-1 nên gán
+   * qua lại được trực tiếp (structural typing), xem `InventoryManager.serialize()`. */
+  inventory: Array<{ itemId: string; quantity: number }>
+  game_time: GameTimeState
+  player_position: PlayerPositionState
 }

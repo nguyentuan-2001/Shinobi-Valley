@@ -1,11 +1,32 @@
 import Phaser from 'phaser'
+import { CharacterPanel, bindCharacterPanelInput } from '../systems/CharacterPanel'
 
 export class UIScene extends Phaser.Scene {
+  /** Bảng nhân vật PHẢI sống ở đây, không phải ở scene gameplay đang active (Game/Grassland/TrainingGround) —
+   * Phaser xếp thứ tự vẽ giữa các scene THEO SCENE, không theo `depth` (depth chỉ so sánh được giữa object
+   * CÙNG 1 scene) — `UIScene` được `launch()` SAU nên luôn vẽ đè lên scene gameplay, đúng ý cho HUD. Nếu tạo
+   * `CharacterPanel` bên trong `GameScene` như lần đầu thử, panel bị đúng chữ HUD (Lv./EXP...) của `UIScene` đè
+   * lên khi 2 vùng chồng nhau — bug thật gặp khi verify bằng Puppeteer (chữ HUD lộ ra giữa panel dù panel có
+   * background gần như đục). Các scene gameplay chỉ ĐỌC lại instance này qua `getCharacterPanel()` (xem đó ở
+   * mỗi scene), không tự tạo riêng. */
+  characterPanel!: CharacterPanel
+
   constructor() {
     super({ key: 'UIScene' })
   }
 
   create() {
+    this.characterPanel = new CharacterPanel(this)
+    bindCharacterPanelInput(this, this.characterPanel)
+    this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) =>
+      this.characterPanel.handlePointerDown(pointer)
+    )
+    this.input.keyboard!.on('keydown-ESC', (event: KeyboardEvent) => {
+      if (event.repeat || !this.characterPanel.isOpen) return
+      event.preventDefault()
+      this.characterPanel.close()
+    })
+
     // UI chạy song song với GameScene/TrainingGroundScene/GrasslandScene (không replace) — HP/MP/EXP giờ đọc
     // THẬT từ `registry` (do `systems/CombatHud.ts` ghi vào, nguồn là singleton `CombatManager` sống xuyên suốt
     // mọi scene, xem giải thích ở đó), không còn là số giả cố định như trước Sprint 5.
