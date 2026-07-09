@@ -382,6 +382,47 @@ User gửi ảnh chụp UI 1 game khác, yêu cầu "tạo các tab tương tự
 - Đã verify bằng Puppeteer: mở bảng bằng C, đổi qua đủ 5 tab; `gainExp(100000)` lên 24 cấp → `free_points = 240` đúng (24×10); bấm nút phân bổ HP → `max_hp` 500→600, `free_points` trừ đúng 1; qua tab Trang bị bấm slot Mũ → equip `leather_helmet`, `getTotalMaxHp()` = 700 (600 gốc + 100 bonus mũ) đúng; Esc đóng bảng; **reload trang thật** → `free_points`/`max_hp`/`equipped_armor` giữ đúng nguyên (tự động qua hệ Save/Load Sprint 6 có sẵn, không cần sửa gì thêm vì mọi field mới đều nằm trong `PlayerStats`); mở bảng ở `GrasslandScene` → hiện đúng, không bị đè bởi HUD (xác nhận bug layering đã sửa đúng).
 - **Chưa làm** (ngoài phạm vi lần này): shop/craft/drop thật cho trang bị (hiện coi như "unlock hết" giống crop Farm), UI reroll thuộc tính phụ/cường hóa (+1 → +10, đó là Sprint 14), đường cong EXP curve thật theo bảng trong progression.md, giao diện chọn item trong tab Trang bị (hiện chỉ xoay vòng qua click vì mỗi slot có ≤2 item thật).
 
+## Nhân dạng "Vegeta" (thử nghiệm) ✅ — ngoài lịch trình, ngoài spec 2 giới tính gốc
+
+User cung cấp 31 file sprite thô (`public/assets/sprites/player/vegeta/raw/`, rip từ 1 animation "xoay
+người/tung đấm" kiểu Vegeta trong Dragon Ball — không phải asset tự vẽ cho dự án này) đã cắt sẵn thành đầu/
+thân/chân rời, yêu cầu ghép lại thành nhân vật chơi được thứ 3. **Lệch khỏi thiết kế gốc** — `asset-manifest.md`
+ghi rõ "Game có 2 giới tính chọn lúc tạo nhân vật... mọi asset player đều tách theo men/women" — coi đây là bổ
+sung thử nghiệm ngoài spec, KHÔNG sửa lại tài liệu thiết kế gốc (men/women vẫn là 2 giới tính chính thức).
+
+- **Không có metadata toạ độ/pivot** giữa 31 mảnh — đã hỏi lại user 2 lần trước khi làm: (1) chấp nhận ghép
+  bằng mắt, lặp lại nhiều vòng cho tới khi khớp thay vì có nguồn tham khảo chính xác; (2) chấp nhận 1 số pose
+  không đúng ngữ nghĩa dáng đi 100% (asset gốc là combo tung đấm, không phải chu kỳ bước đi thật) — miễn khớp
+  hình, không hở/lệch.
+- **[scripts/build-vegeta-sprites.py](../../scripts/build-vegeta-sprites.py)** (mới, cần `pip install pillow`)
+  — đọc từng bộ 3 (đầu, thân+tay, hông+chân) từ `raw/`, chồng lên nhau theo toạ độ CĂN GIỮA trục X + độ lấn
+  (overlap) dò bằng mắt qua nhiều vòng thử-xem-ảnh-chỉnh (test trực tiếp bằng Puppeteer, phóng to 3-4x để soi
+  từng pixel chỗ nối). Nhiều mảnh "chân xoay chéo" (dáng chạy động) không khớp bằng phép chồng đơn giản (điểm
+  neo lệch tâm khác hẳn so với mảnh đứng yên) — thay vì cố ép, dùng lại 2 mảnh chân đứng/bước đã test ổn định
+  (`6044`/`6045`) cho mọi hướng đi thay vì ép dùng mảnh chéo bị hở hình.
+  - **Cả 5 action dùng CHUNG đúng 1 kích thước cell (152×190)** — phát hiện `Player.ts` chỉ tính 1
+    `FRAME_SIZES`/`shadowOffsetY` DUY NHẤT cho toàn bộ giới tính (không tách theo action như men/women vốn đã
+    gần đều nhau) — nếu để mỗi action 1 size khác nhau (ảnh ghép thật ra khác size nhau theo pose), nhân vật sẽ
+    "nhảy" vị trí/bóng đổ mỗi lần đổi animation. Lấy max width/height qua toàn bộ 11 frame rồi pad về chung 1
+    cell, neo đáy (chân luôn chạm cạnh dưới cell) để giữ baseline đồng nhất.
+  - Kết quả: `idle_front` (2 frame), `walk_front`/`walk_back`/`walk_side` (2 frame/hướng — giới hạn đúng số pose
+    ghép được từ 31 mảnh gốc, không đủ để làm chu kỳ bước chân thật như men/women 8 frame), `attack` (3 frame:
+    lên gối → tung 2 đấm → thu tay).
+- **`Player.ts`**: `Gender` thêm `'vegeta'`, `FRAME_SIZES`/`SPRITE_SCALE` (0.35, canh gần đúng chiều cao hiển
+  thị của `women` để đồng bộ tỉ lệ) /`WALK_CONFIG` (`frames: 'all', stillFrame: 0`, giống cách `women` dùng hết
+  toàn bộ frame ghép được).
+- **`PreloadScene.ts`**: thêm `vegeta` vào `frameSizes` (152×190 cho cả 5 action) + vòng lặp load spritesheet.
+- **`GameScene.ts`/`GrasslandScene.ts`/`TrainingGroundScene.ts`**: đổi tạm `new Player(..., 'women')` →
+  `'vegeta'` để thấy/test ngay trong game — **chưa có màn hình chọn nhân dạng thật** (cùng tình trạng với
+  men/women trước đó, chưa từng có UI chọn giới tính), đổi code trực tiếp là cách duy nhất để xem nhân dạng nào
+  đang active.
+- Đã verify bằng Puppeteer (chạy game thật, không chỉ xem ảnh ghép rời): idle đứng yên, đi bộ cả 3 hướng
+  (trước/sau/nghiêng), tấn công — không lỗi tải asset mới (chỉ còn lỗi 404 cũ đã biết, không liên quan), nhân
+  vật hiện đúng tỉ lệ so với map/bóng đổ/con trỏ tương tác, không "nhảy" vị trí khi đổi animation.
+- **Chưa làm / giới hạn đã biết**: chưa có UI chọn nhân dạng thật; poses walk không phải chu kỳ bước chân
+  chuẩn (chấp nhận theo yêu cầu user); nếu sau này có thêm frame gốc mới, chạy lại
+  `scripts/build-vegeta-sprites.py` sau khi thêm entry vào `ACTIONS` + đặt file mới vào `raw/`.
+
 ## Sprint 7+ — chưa bắt đầu (Phase 2 — Beta)
 
 Xem chi tiết từng sprint ở [dev-schedule.md](dev-schedule.md) Phụ lục C.
