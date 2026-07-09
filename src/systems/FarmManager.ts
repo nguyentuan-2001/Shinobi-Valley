@@ -1,4 +1,4 @@
-import type { FarmTileState } from '../data/types'
+import type { FarmTileState, FarmTileSaveState } from '../data/types'
 import type { FarmTilePlacement, FarmTileType } from '../data/farmTiles'
 import { GameData } from '../data/DataLoader'
 
@@ -243,6 +243,41 @@ export class FarmManager {
     for (const tile of this.tiles) {
       if (tile.plantedAt !== null) tile.plantedAt -= ms
       if (tile.lastWateredAt !== null) tile.lastWateredAt -= ms
+    }
+  }
+
+  /** Sprint 6 — chụp lại state runtime của mọi ô để `SaveManager` lưu ra localStorage. Chỉ lấy đúng phần STATE
+   * (không lấy `x/y/width/height/tileType`, luôn dựng lại giống nhau từ `farmTiles.ts` mỗi lần khởi tạo), xem
+   * giải thích đầy đủ ở `FarmTileSaveState` trong `data/types.ts`. */
+  serialize(): FarmTileSaveState[] {
+    return this.tiles.map((tile) => ({
+      id: tile.id,
+      state: tile.state,
+      cropId: tile.cropId,
+      plantedAt: tile.plantedAt,
+      lastWateredAt: tile.lastWateredAt,
+      harvestCountRemaining: tile.harvestCountRemaining,
+      cycleHours: tile.cycleHours,
+      isRegrowCycle: tile.isRegrowCycle
+    }))
+  }
+
+  /** Sprint 6 — áp state đã lưu lên đúng ô khớp `id` (bỏ qua entry nào không khớp ô hiện có, vd map đổi layout
+   * giữa các bản build — không nên xảy ra ở V1 nhưng phòng hờ không throw giữa lúc load game). Chỉ gọi ĐÚNG 1
+   * LẦN lúc boot game (trước khi `update()` chạy lần đầu), không phải mỗi lần `create()` — nếu không sẽ ghi đè
+   * mất tiến độ đã làm sau khi load, giống lỗi persistence đã gặp với `farmManager`/`timeManager`. */
+  loadState(saved: readonly FarmTileSaveState[]): void {
+    const savedById = new Map(saved.map((entry) => [entry.id, entry]))
+    for (const tile of this.tiles) {
+      const entry = savedById.get(tile.id)
+      if (!entry) continue
+      tile.state = entry.state
+      tile.cropId = entry.cropId
+      tile.plantedAt = entry.plantedAt
+      tile.lastWateredAt = entry.lastWateredAt
+      tile.harvestCountRemaining = entry.harvestCountRemaining
+      tile.cycleHours = entry.cycleHours
+      tile.isRegrowCycle = entry.isRegrowCycle
     }
   }
 }

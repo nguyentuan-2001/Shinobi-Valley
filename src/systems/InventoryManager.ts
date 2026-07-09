@@ -51,6 +51,19 @@ export class InventoryManager {
       remaining -= add
     }
   }
+
+  /** Sprint 6 — bản sao rời của toàn bộ ô để `SaveManager` lưu ra localStorage (không trả thẳng `this.slots`,
+   * tránh nơi nhận vô tình sửa trực tiếp mảng runtime). */
+  serialize(): InventorySlot[] {
+    return this.slots.map((slot) => ({ ...slot }))
+  }
+
+  /** Sprint 6 — thay TOÀN BỘ túi đồ hiện tại bằng dữ liệu đã lưu (xoá sạch rồi nạp lại, không cộng dồn vào đồ
+   * đang có) — chỉ gọi ĐÚNG 1 LẦN lúc boot game load save, giống lý do ở `FarmManager.loadState()`. */
+  loadSlots(saved: readonly { itemId: string; quantity: number }[]): void {
+    this.slots.length = 0
+    for (const slot of saved) this.slots.push({ ...slot })
+  }
 }
 
 /** Instance DUY NHẤT dùng chung mọi scene — xem docstring class phía trên. */

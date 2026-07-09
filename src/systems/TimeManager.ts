@@ -103,4 +103,17 @@ export class TimeManager extends Phaser.Events.EventEmitter {
   getTimeString(): string {
     return `${String(this.getHour()).padStart(2, '0')}:${String(this.getMinute()).padStart(2, '0')}`
   }
+
+  /** Sprint 6 — lưu nguyên `hour` DẠNG SỐ THỰC (không `Math.floor` như `getHour()`) để phút hiện tại không bị
+   * làm tròn mất mỗi lần lưu/tải lại. */
+  serialize(): { day: number; hour: number } {
+    return { day: this.day, hour: this.hour }
+  }
+
+  /** Sprint 6 — chỉ gọi ĐÚNG 1 LẦN lúc boot game load save, giống lý do ở `FarmManager.loadState()`. */
+  loadState(day: number, hour: number): void {
+    this.day = day
+    this.hour = hour
+    this.isNight = this.computeIsNight(hour)
+  }
 }
