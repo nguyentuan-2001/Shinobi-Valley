@@ -394,9 +394,9 @@ public/assets/
 - [x] Sprint 4 — Tưới nước, moisture, thu hoạch, Inventory
 - [x] Sprint 5 — Combat cơ bản
 - [x] Sprint 6 — Save/Load (chốt Alpha)
-- [ ] Sprint 7 — Đủ 14 cây + phân bón
-- [ ] Sprint 8 — Chăn nuôi
-- [ ] Sprint 9 — Câu cá
+- [x] Sprint 7 — Đủ 14 cây + phân bón
+- [x] Sprint 8 — Chăn nuôi
+- [x] Sprint 9 — Câu cá
 - [ ] Sprint 10 — NPC, dialogue, relationship, shop
 - [ ] Sprint 11 — 4 hệ vũ khí còn lại + skill/status
 - [ ] Sprint 12 — Map 2-5 + cơ chế riêng
