@@ -22,6 +22,7 @@ export type FishRarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary'
 export type FarmTileState = 'empty' | 'tilled' | 'planted' | 'ready' | 'withered'
 export type Gender = 'male' | 'female'
 export type FertilizerTier = 'basic' | 'advanced' | 'golden'
+export type PenType = 'chicken_coop' | 'large_pen'
 
 export interface Crop {
   id: string
@@ -60,6 +61,19 @@ export interface Fertilizer {
   yield_bonus: number
   stack_max: number
   description: string
+}
+
+/** Định nghĩa 1 loại vật nuôi (Sprint 8) — `pen_type` quyết định con này nuôi được trong loại chuồng nào
+ * (`chicken_coop` 4 chỗ cho gà/vịt, `large_pen` 2 chỗ cho bò/cừu, theo đúng `docs/gameplay/crafting.md`).
+ * Chưa có shop nên `buy_price` hiện chỉ mang tính tham khảo/tư liệu, chưa có nơi nào đọc field này để bán thật
+ * (giống cách `Weapon`/`Armor` giữ `buy_price`/`craft_recipe` dù chưa có shop/craft thật). */
+export interface AnimalDef {
+  id: string
+  name: string
+  pen_type: PenType
+  buy_price: number
+  product_item: string
+  cycle_hours: number
 }
 
 export interface Item {
@@ -302,11 +316,17 @@ export interface FarmTileSaveState {
   fertilizerId: string | null
 }
 
+/** Trạng thái lưu lại của 1 CHỖ NUÔI trong chuồng (Sprint 8) — `id` khớp `AnimalPenSlot.id` (vị trí cố định,
+ * xem `data/animalPens.ts`), giống cách `FarmTileSaveState` khớp theo `id` thay vì toạ độ. `animalType: null`
+ * = chỗ trống (chưa có con nào — chưa có shop mua con giống, test bằng cách gán thẳng qua console, xem
+ * `docs/planning/progress.md` Sprint 8). `cycleStartAt: null` = chưa cho ăn lần nào từ sau lần thu hoạch gần
+ * nhất — phải cho ăn để BẮT ĐẦU 1 chu kỳ sản xuất mới (đúng "Done when": bỏ đói thì không sản xuất, không chết
+ * — con vật không mất đi, chỉ đơn giản chu kỳ không chạy). */
 export interface AnimalState {
-  type: string
-  pen_slot: number
-  last_fed_timestamp: number
-  last_product_timestamp: number
+  id: number
+  animalType: string | null
+  lastFedAt: number | null
+  cycleStartAt: number | null
 }
 
 /** Vị trí + map hiện tại lúc lưu — Sprint 6 chỉ hỗ trợ resume vào lại `GameScene` (Farm), KHÔNG resume thẳng

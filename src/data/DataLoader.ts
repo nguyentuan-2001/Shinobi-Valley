@@ -1,5 +1,6 @@
 import type Phaser from 'phaser'
 import type {
+  AnimalDef,
   Armor,
   Crop,
   Fertilizer,
@@ -22,6 +23,7 @@ const DATA_FILES = {
   weapons: '/data/weapons.json',
   armor: '/data/armor.json',
   fertilizers: '/data/fertilizers.json',
+  animals: '/data/animals.json',
   skills: '/data/skills.json',
   monsters: '/data/monsters.json',
   npcs: '/data/npc.json',
@@ -41,6 +43,7 @@ interface GameDataStore {
   weapons: Weapon[]
   armor: Armor[]
   fertilizers: Fertilizer[]
+  animals: AnimalDef[]
   skills: Skill[]
   monsters: Monster[]
   npcs: Npc[]
@@ -58,6 +61,7 @@ const store: GameDataStore = {
   weapons: [],
   armor: [],
   fertilizers: [],
+  animals: [],
   skills: [],
   monsters: [],
   npcs: [],
@@ -98,6 +102,9 @@ export const GameData = {
   },
   get fertilizers(): Fertilizer[] {
     return store.fertilizers
+  },
+  get animals(): AnimalDef[] {
+    return store.animals
   },
   get skills(): Skill[] {
     return store.skills

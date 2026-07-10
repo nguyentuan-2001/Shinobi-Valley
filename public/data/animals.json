@@ -1,0 +1,6 @@
+[
+  { "id": "chicken", "name": "Gà", "pen_type": "chicken_coop", "buy_price": 800, "product_item": "chicken_egg", "cycle_hours": 8 },
+  { "id": "duck", "name": "Vịt", "pen_type": "chicken_coop", "buy_price": 1200, "product_item": "duck_egg", "cycle_hours": 10 },
+  { "id": "cow", "name": "Bò", "pen_type": "large_pen", "buy_price": 8000, "product_item": "fresh_milk", "cycle_hours": 24 },
+  { "id": "sheep", "name": "Cừu", "pen_type": "large_pen", "buy_price": 6000, "product_item": "raw_wool", "cycle_hours": 48 }
+]
