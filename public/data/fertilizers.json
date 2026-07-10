@@ -1,0 +1,35 @@
+[
+  {
+    "id": "fertilizer_basic",
+    "name": "Phân bón cơ bản",
+    "tier": "basic",
+    "buy_price": 50,
+    "growth_speed_multiplier": 0.85,
+    "moisture_decay_multiplier": 1,
+    "yield_bonus": 0,
+    "stack_max": 99,
+    "description": "Giảm 15% thời gian cây lớn."
+  },
+  {
+    "id": "fertilizer_advanced",
+    "name": "Phân bón cao cấp",
+    "tier": "advanced",
+    "buy_price": 150,
+    "growth_speed_multiplier": 0.7,
+    "moisture_decay_multiplier": 0.8,
+    "yield_bonus": 0,
+    "stack_max": 99,
+    "description": "Giảm 30% thời gian cây lớn, giảm 20% tốc độ mất độ ẩm."
+  },
+  {
+    "id": "fertilizer_golden",
+    "name": "Phân bón thần kỳ",
+    "tier": "golden",
+    "buy_price": 400,
+    "growth_speed_multiplier": 0.55,
+    "moisture_decay_multiplier": 0.6,
+    "yield_bonus": 1,
+    "stack_max": 99,
+    "description": "Giảm 45% thời gian cây lớn, giảm 40% tốc độ mất độ ẩm, +1 sản lượng khi hái."
+  }
+]

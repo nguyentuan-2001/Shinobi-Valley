@@ -21,11 +21,14 @@ export class InventoryManager {
     return this.slots
   }
 
-  /** Tra `stack_max` thật từ `items.json` nếu có entry khớp id; nông sản/vật phẩm chưa có entry thì dùng mặc
-   * định — không chặn cộng đồ vào túi chỉ vì thiếu data item, vì crop.json không tự có field này. */
+  /** Tra `stack_max` thật từ `items.json`/`fertilizers.json` (Sprint 7) nếu có entry khớp id; nông sản/vật phẩm
+   * chưa có entry thì dùng mặc định — không chặn cộng đồ vào túi chỉ vì thiếu data item, vì crop.json không tự
+   * có field này. */
   getStackMax(itemId: string): number {
     const item = GameData.items.find((i) => i.id === itemId)
-    return item?.stack_max ?? DEFAULT_STACK_MAX
+    if (item) return item.stack_max
+    const fertilizer = GameData.fertilizers.find((f) => f.id === itemId)
+    return fertilizer?.stack_max ?? DEFAULT_STACK_MAX
   }
 
   /** Cộng `quantity` item vào túi — lấp đầy các stack đang có chỗ trống trước (đúng cùng itemId, chưa đầy),
@@ -50,6 +53,30 @@ export class InventoryManager {
       this.slots.push({ itemId, quantity: add })
       remaining -= add
     }
+  }
+
+  /** Trừ `quantity` item khỏi túi (Sprint 7 — dùng cho bón phân, tiêu hao vật phẩm) — trả `false` VÀ KHÔNG trừ
+   * gì cả nếu tổng số đang có không đủ (tất cả-hoặc-không-gì, tránh trừ dở dang rồi vẫn báo thất bại). Trừ dần
+   * từ các slot đang có (thứ tự bất kỳ), xoá hẳn slot nào về 0. */
+  removeItem(itemId: string, quantity: number): boolean {
+    if (quantity <= 0) return true
+    const total = this.slots
+      .filter((slot) => slot.itemId === itemId)
+      .reduce((sum, slot) => sum + slot.quantity, 0)
+    if (total < quantity) return false
+
+    let remaining = quantity
+    for (const slot of this.slots) {
+      if (remaining <= 0) break
+      if (slot.itemId !== itemId) continue
+      const take = Math.min(slot.quantity, remaining)
+      slot.quantity -= take
+      remaining -= take
+    }
+    for (let i = this.slots.length - 1; i >= 0; i--) {
+      if (this.slots[i].quantity <= 0) this.slots.splice(i, 1)
+    }
+    return true
   }
 
   /** Sprint 6 — bản sao rời của toàn bộ ô để `SaveManager` lưu ra localStorage (không trả thẳng `this.slots`,

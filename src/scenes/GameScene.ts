@@ -193,16 +193,21 @@ export class GameScene extends Phaser.Scene {
   private bulkActionsPanelHeight = 0
   private bulkFromInput!: Phaser.GameObjects.DOMElement
   private bulkToInput!: Phaser.GameObjects.DOMElement
-  /** Text kết quả hiện sau khi bấm 1 trong 4 nút (VD: "Đã cuốc 5 ô") — phản hồi tức thời, không cần mở lại
+  /** Text kết quả hiện sau khi bấm 1 trong 6 nút (VD: "Đã cuốc 5 ô") — phản hồi tức thời, không cần mở lại
    * bảng mới thấy. */
   private bulkStatusText!: Phaser.GameObjects.Text
-  /** Label của riêng nút "Gieo Hạt Tất Cả" — cập nhật lại tên hạt đang chọn mỗi lần mở bảng (`openBulkActions()`),
-   * giữ reference riêng vì đây là nút duy nhất có label đổi động (3 nút còn lại là text tĩnh). */
+  /** Label của các nút có text đổi động — "Gieo Hạt Tất Cả" (tên hạt đang chọn) và "Bón Phân: ..." (loại phân
+   * + số lượng còn lại) — cập nhật lại mỗi lần mở bảng (`openBulkActions()`) hoặc đổi lựa chọn, giữ reference
+   * riêng vì 2 nút này đổi label động (4 nút còn lại là text tĩnh). */
   private bulkActionButtonTexts: Phaser.GameObjects.Text[] = []
-  /** Toạ độ/kích thước 4 nút trong bảng (tính 1 lần lúc tạo, xem `createBulkActionsUI()`) — dùng lại để tự
+  /** Toạ độ/kích thước 6 nút trong bảng (tính 1 lần lúc tạo, xem `createBulkActionsUI()`) — dùng lại để tự
    * hit-test thủ công trong `handleBulkActionsClick()`, xem giải thích lý do không dùng `.setInteractive()`
    * trực tiếp trên nút tại chỗ khai báo layout này. */
   private bulkButtonLayout = { width: 0, height: 0, gap: 0, firstY: 0 }
+  /** Loại phân bón đang chọn để bón hàng loạt (Sprint 7) — `null` nếu chưa chọn/túi đồ không có loại nào. Xoay
+   * vòng qua các loại ĐANG CÓ trong túi bằng nút "Bón Phân" (`cycleFertilizerSelection()`), tương tự cách chọn
+   * hạt giống ở menu hạt giống nhưng không cần menu riêng — chỉ có tối đa 3 loại phân bón. */
+  private selectedFertilizerId: string | null = null
 
   /** Overlay tô đất ẩm theo % moisture của từng ô đang có cây sống — key là `FarmTilePlacement.id`, giống cách
    * `cropImages` theo dõi ảnh cây (tạo khi bắt đầu có cây, xoá khi ô hết cây). */
@@ -435,7 +440,7 @@ export class GameScene extends Phaser.Scene {
     })
 
     // Click ra ngoài bảng khi menu hạt giống đang mở = đóng menu; bảng Công Cụ Nông Trại thì click BÊN TRONG =
-    // bấm đúng 1 trong 4 nút (tự hit-test thủ công, xem `handleBulkActionsClick()` + giải thích lý do không
+    // bấm đúng 1 trong 6 nút (tự hit-test thủ công, xem `handleBulkActionsClick()` + giải thích lý do không
     // dùng `.setInteractive()` trực tiếp), click ra ngoài = đóng, cùng hành vi Esc. `pointer.x/y` là toạ độ
     // canvas, so trực tiếp được với vị trí container vì mọi bảng đều `setScrollFactor(0)` (cố định theo
     // camera, không lệch theo world scroll). Bảng nhân vật tự xử lý click của riêng nó ở `UIScene` (scene
@@ -1429,11 +1434,14 @@ export class GameScene extends Phaser.Scene {
   /** Tạo sẵn 1 lần bảng Công Cụ Nông Trại (ẩn ban đầu) — cùng kiểu bảng xanh ngọc/viền sáng với 2 bảng trên
    * cho đồng bộ UI. 2 ô nhập số (`bulkFromInput`/`bulkToInput`) là DOM Element thật (input HTML đè lên canvas,
    * xem comment ở khai báo field) — tắt hẳn bàn phím Phaser lúc đang gõ (`focus`/`blur`) để không vô tình bắn
-   * trúng phím tắt 1 chữ khác (G/T/I/F...) đang lắng nghe toàn cục, xem giải thích trong `main.ts`. 4 nút bấm
-   * còn lại vẽ bằng `Rectangle`+`Text` (giống mọi UI khác trong file này, không cần asset riêng). */
+   * trúng phím tắt 1 chữ khác (G/T/I/F...) đang lắng nghe toàn cục, xem giải thích trong `main.ts`. 6 nút bấm
+   * còn lại vẽ bằng `Rectangle`+`Text` (giống mọi UI khác trong file này, không cần asset riêng) — 2 nút cuối
+   * (Sprint 7) là chọn/bón phân bón, xem `cycleFertilizerSelection()`/`fertilizeAllInRange()`. */
   private createBulkActionsUI() {
     const panelWidth = 300
-    const panelHeight = 300
+    // +80 so với ban đầu (300) — đủ chỗ cho 2 nút phân bón mới (Sprint 7), mọi offset dọc khác (title/label/
+    // input/nút/status) đều tính theo `panelHeight/2` nên tự giãn theo, không cần sửa tay từng chỗ.
+    const panelHeight = 380
     this.bulkActionsPanelWidth = panelWidth
     this.bulkActionsPanelHeight = panelHeight
     const centerX = this.scale.width / 2
@@ -1497,7 +1505,14 @@ export class GameScene extends Phaser.Scene {
       gap: 8,
       firstY: -panelHeight / 2 + 118
     }
-    const buttonLabels = ['Cuốc Tất Cả', 'Tưới Tất Cả', 'Gieo Hạt Tất Cả', 'Thu Hoạch Tất Cả']
+    const buttonLabels = [
+      'Cuốc Tất Cả',
+      'Tưới Tất Cả',
+      'Gieo Hạt Tất Cả',
+      'Thu Hoạch Tất Cả',
+      'Bón Phân: (chưa chọn)',
+      'Bón Phân Tất Cả'
+    ]
     const buttonObjects: Phaser.GameObjects.GameObject[] = []
     this.bulkActionButtonTexts = []
     buttonLabels.forEach((label, index) => {
@@ -1576,6 +1591,7 @@ export class GameScene extends Phaser.Scene {
     this.bulkActionsOpen = true
     const crop = GameData.crops.find((c) => c.id === this.selectedCropId)
     this.bulkActionButtonTexts[2].setText(`Gieo Hạt Tất Cả (${crop?.name ?? this.selectedCropId})`)
+    this.refreshFertilizerButtonLabel()
     this.bulkStatusText.setText('')
     this.bulkActionsContainer.setVisible(true)
     this.bulkFromInput.setVisible(true)
@@ -1608,7 +1624,7 @@ export class GameScene extends Phaser.Scene {
     )
   }
 
-  /** Tự hit-test 4 nút bằng toạ độ (thay cho `.setInteractive()`, xem giải thích ở `createBulkActionsUI()`) —
+  /** Tự hit-test 6 nút bằng toạ độ (thay cho `.setInteractive()`, xem giải thích ở `createBulkActionsUI()`) —
    * quy `pointer.x/y` (toạ độ canvas) về hệ toạ độ LOCAL của container (trừ đi vị trí container), rồi so với
    * đúng khối chữ nhật của từng nút đã lưu trong `bulkButtonLayout`. */
   private handleBulkActionsClick(pointer: Phaser.Input.Pointer) {
@@ -1619,7 +1635,9 @@ export class GameScene extends Phaser.Scene {
       () => this.tillAllInRange(),
       () => this.waterAllInRange(),
       () => this.plantAllInRange(),
-      () => this.harvestAllInRange()
+      () => this.harvestAllInRange(),
+      () => this.cycleFertilizerSelection(),
+      () => this.fertilizeAllInRange()
     ]
     actions.forEach((action, index) => {
       const buttonY = firstY + index * (height + gap)
@@ -1630,7 +1648,7 @@ export class GameScene extends Phaser.Scene {
         localY <= buttonY + height / 2
       if (insideButton) action()
     })
-    this.saveProgress() // Sprint 6 — cả 4 nút đều là hành động quan trọng (thao tác hàng loạt), lưu ngay sau đó.
+    this.saveProgress() // Sprint 6 — cả 6 nút đều là hành động quan trọng (thao tác hàng loạt), lưu ngay sau đó.
   }
 
   /** Đọc khoảng ID từ 2 ô nhập — ô trống (hoặc không phải số) coi như "không giới hạn" phía đó, đúng yêu cầu
@@ -1695,5 +1713,63 @@ export class GameScene extends Phaser.Scene {
       count++
     }
     this.bulkStatusText.setText(`Đã thu hoạch ${count} ô`)
+  }
+
+  /** Xoay vòng qua các loại phân bón ĐANG CÓ trong túi đồ (số lượng > 0) — bỏ qua loại đang có 0 (đã bón hết),
+   * giống tinh thần `CharacterPanel.cycleWeapon()` nhưng nguồn là túi đồ (số lượng hữu hạn) chứ không phải toàn
+   * bộ `GameData`. Không có loại nào trong túi thì báo trong `bulkStatusText`, không đổi `selectedFertilizerId`. */
+  private cycleFertilizerSelection() {
+    const owned = GameData.fertilizers
+      .map((f) => f.id)
+      .filter((id) =>
+        inventoryManager.getSlots().some((slot) => slot.itemId === id && slot.quantity > 0)
+      )
+    if (owned.length === 0) {
+      this.selectedFertilizerId = null
+      this.bulkStatusText.setText('Không có phân bón nào trong túi đồ')
+      this.refreshFertilizerButtonLabel()
+      return
+    }
+    const currentIndex = this.selectedFertilizerId ? owned.indexOf(this.selectedFertilizerId) : -1
+    this.selectedFertilizerId = owned[(currentIndex + 1) % owned.length]
+    this.refreshFertilizerButtonLabel()
+  }
+
+  /** Cập nhật label nút "Bón Phân: ..." theo đúng `selectedFertilizerId` + số lượng còn lại trong túi — gọi lại
+   * mỗi lần mở bảng (`openBulkActions()`) và mỗi lần đổi lựa chọn/bón xong (số lượng có thể vừa về 0). */
+  private refreshFertilizerButtonLabel() {
+    if (this.selectedFertilizerId === null) {
+      this.bulkActionButtonTexts[4].setText('Bón Phân: (chưa chọn)')
+      return
+    }
+    const fertilizer = GameData.fertilizers.find((f) => f.id === this.selectedFertilizerId)
+    const quantity = inventoryManager
+      .getSlots()
+      .filter((slot) => slot.itemId === this.selectedFertilizerId)
+      .reduce((sum, slot) => sum + slot.quantity, 0)
+    this.bulkActionButtonTexts[4].setText(
+      `Bón Phân: ${fertilizer?.name ?? this.selectedFertilizerId} (x${quantity})`
+    )
+  }
+
+  /** Bón `selectedFertilizerId` lên mọi ô `planted` trong khoảng — trừ đúng 1 phân bón/ô từ túi đồ qua
+   * `removeItem()`. Dừng hẳn (không lỗi, chỉ dừng loop) ngay khi hết phân bón giữa chừng — số ô báo trong
+   * `bulkStatusText` tự phản ánh đúng số ô bón được nếu hết phân bón trước khi bón hết khoảng. */
+  private fertilizeAllInRange() {
+    if (this.selectedFertilizerId === null) {
+      this.bulkStatusText.setText('Chưa chọn loại phân bón (bấm nút "Bón Phân" để chọn)')
+      return
+    }
+    const { min, max } = this.getBulkActionRange()
+    let count = 0
+    for (const tile of this.farmManager.getTiles()) {
+      if (tile.id < min || tile.id > max) continue
+      if (tile.state !== 'planted') continue
+      if (!inventoryManager.removeItem(this.selectedFertilizerId, 1)) break
+      this.farmManager.applyFertilizer(tile, this.selectedFertilizerId)
+      count++
+    }
+    this.bulkStatusText.setText(`Đã bón phân cho ${count} ô`)
+    this.refreshFertilizerButtonLabel()
   }
 }

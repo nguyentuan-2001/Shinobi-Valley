@@ -21,6 +21,7 @@ export type Station = 'blacksmith' | 'alchemist' | 'kitchen' | 'loom' | 'field'
 export type FishRarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary'
 export type FarmTileState = 'empty' | 'tilled' | 'planted' | 'ready' | 'withered'
 export type Gender = 'male' | 'female'
+export type FertilizerTier = 'basic' | 'advanced' | 'golden'
 
 export interface Crop {
   id: string
@@ -42,6 +43,23 @@ export interface Crop {
   moisture_decay_per_hour: number
   moisture_min: number
   moisture_max: number
+}
+
+/** Phân bón — file/interface riêng (giống `Weapon`/`Armor`) thay vì nhồi vào `items.json`/`Item` chung, vì có
+ * field số nhân hiệu ứng riêng mà nông sản/vật liệu khác không cần. Bón lên 1 ô đang `planted` (xem
+ * `FarmManager.applyFertilizer()`): `growth_speed_multiplier` nhân trực tiếp vào số giờ cần để lớn/chín (nhỏ
+ * hơn 1 = lớn nhanh hơn), `moisture_decay_multiplier` nhân vào `crop.moisture_decay_per_hour` (nhỏ hơn 1 = giữ
+ * ẩm lâu hơn), `yield_bonus` cộng thẳng vào số lượng thu hoạch được (sau khi đã tính % độ ẩm). */
+export interface Fertilizer {
+  id: string
+  name: string
+  tier: FertilizerTier
+  buy_price: number
+  growth_speed_multiplier: number
+  moisture_decay_multiplier: number
+  yield_bonus: number
+  stack_max: number
+  description: string
 }
 
 export interface Item {
@@ -280,6 +298,8 @@ export interface FarmTileSaveState {
   harvestCountRemaining: number
   cycleHours: number
   isRegrowCycle: boolean
+  /** Loại phân bón đang có hiệu lực trên ô (Sprint 7) — `null` nếu chưa bón. */
+  fertilizerId: string | null
 }
 
 export interface AnimalState {

@@ -44,6 +44,10 @@ export interface FarmTileRuntime {
   /** `true` từ lần hái thứ 2 trở đi của cây `multi_harvest` — cây hái lại không "nảy mầm" từ đầu, bỏ qua giai
    * đoạn seed/sprout, chỉ hiện `growing` liên tục tới khi chín lại (xem `getVisualStage()`). */
   isRegrowCycle: boolean
+  /** Loại phân bón đang có hiệu lực (Sprint 7) — `null` nếu chưa bón. Chỉ bón được lên ô đang `planted`, xem
+   * `applyFertilizer()`. Giữ nguyên qua các lần hái lại (`multi_harvest` regrow) — chỉ mất khi tile về hẳn
+   * `empty` (hái xong cây không multi-harvest, hoặc trồng cây mới) hoặc `withered` được dọn. */
+  fertilizerId: string | null
 }
 
 /** Quản lý trạng thái CUỐC/TRỒNG/TƯỚI/LỚN/THU HOẠCH/HÉO của từng ô đất trồng cây — tách biệt khỏi rendering
@@ -76,7 +80,8 @@ export class FarmManager {
         lastWateredAt: null,
         harvestCountRemaining: 0,
         cycleHours: 0,
-        isRegrowCycle: false
+        isRegrowCycle: false,
+        fertilizerId: null
       }))
   }
 
@@ -128,7 +133,28 @@ export class FarmManager {
     tile.harvestCountRemaining = crop.harvest_count
     tile.cycleHours = crop.growth_hours
     tile.isRegrowCycle = false
+    tile.fertilizerId = null
     return true
+  }
+
+  /** Bón phân (Sprint 7): chỉ áp dụng được lên ô đang `planted` (cây đang sống, chưa chín) — thay thế thẳng
+   * loại phân cũ nếu có (không cộng dồn hiệu ứng nhiều loại, giống quy tắc "không chồng chất" của status
+   * effect). Không tự trừ vật phẩm trong túi đồ — gọi nơi khác (`GameScene`) trừ trước khi gọi hàm này. */
+  applyFertilizer(tile: FarmTileRuntime, fertilizerId: string): boolean {
+    if (tile.state !== 'planted') return false
+    if (!GameData.fertilizers.some((f) => f.id === fertilizerId)) return false
+    tile.fertilizerId = fertilizerId
+    return true
+  }
+
+  /** Số giờ thật cần để lớn/chín, đã áp `growth_speed_multiplier` của phân bón đang bón (nếu có) — dùng chung
+   * cho `update()` (biết khi nào chuyển `ready`) và `getVisualStage()` (tính % progress hiển thị), tránh lệch
+   * giữa "đã chín" và "hình vẽ đang ở giai đoạn nào" nếu chỉ sửa 1 trong 2 chỗ. */
+  private getEffectiveCycleHours(tile: FarmTileRuntime): number {
+    if (tile.fertilizerId === null) return tile.cycleHours
+    const fertilizer = GameData.fertilizers.find((f) => f.id === tile.fertilizerId)
+    if (!fertilizer) return tile.cycleHours
+    return tile.cycleHours * fertilizer.growth_speed_multiplier
   }
 
   /** Tưới nước: chỉ áp dụng được lên ô đang `planted` (đang có cây sống, chưa chín) — về 100% ngay, không
@@ -142,13 +168,19 @@ export class FarmManager {
 
   /** Độ ẩm hiện tại (50-100), tính LẠI từ `lastWateredAt` mỗi lần gọi — `null` nếu ô không có cây đang sống để
    * tính (state khác `planted`/`ready`, hoặc thiếu data). Tốc độ giảm dùng đúng `crop.moisture_decay_per_hour`
-   * (đã tính sẵn = 50/growth_hours trong data, khớp công thức farming.md). */
+   * (đã tính sẵn = 50/growth_hours trong data, khớp công thức farming.md), nhân thêm `moisture_decay_multiplier`
+   * của phân bón đang bón (Sprint 7) nếu có — nhỏ hơn 1 nghĩa là giữ ẩm lâu hơn. */
   getMoisture(tile: FarmTileRuntime, now: number = Date.now()): number | null {
     if (tile.lastWateredAt === null || tile.cropId === null) return null
     const crop = GameData.crops.find((c) => c.id === tile.cropId)
     if (!crop) return null
+    const fertilizer =
+      tile.fertilizerId === null
+        ? null
+        : (GameData.fertilizers.find((f) => f.id === tile.fertilizerId) ?? null)
+    const decayPerHour = crop.moisture_decay_per_hour * (fertilizer?.moisture_decay_multiplier ?? 1)
     const elapsedHours = (now - tile.lastWateredAt) / 3_600_000
-    const decayed = MOISTURE_MAX - crop.moisture_decay_per_hour * elapsedHours
+    const decayed = MOISTURE_MAX - decayPerHour * elapsedHours
     return Math.min(MOISTURE_MAX, Math.max(MOISTURE_MIN, decayed))
   }
 
@@ -169,7 +201,12 @@ export class FarmManager {
     const moisture = this.getMoisture(tile) ?? MOISTURE_MIN
     const baseYield =
       crop.yield_min + Math.floor(Math.random() * (crop.yield_max - crop.yield_min + 1))
-    const quantity = Math.max(1, Math.round(baseYield * (moisture / 100)))
+    const fertilizer =
+      tile.fertilizerId === null
+        ? null
+        : (GameData.fertilizers.find((f) => f.id === tile.fertilizerId) ?? null)
+    const quantity =
+      Math.max(1, Math.round(baseYield * (moisture / 100))) + (fertilizer?.yield_bonus ?? 0)
     const cropId = tile.cropId
 
     if (crop.multi_harvest && tile.harvestCountRemaining > 1) {
@@ -178,6 +215,7 @@ export class FarmManager {
       tile.plantedAt = Date.now()
       tile.cycleHours = crop.regrow_hours
       tile.isRegrowCycle = true
+      // Giữ nguyên `fertilizerId` — phân bón đã bón còn hiệu lực suốt các lần hái lại, không cần bón lại mỗi vụ.
     } else if (crop.multi_harvest) {
       // Hết lượt hái cuối — héo chứ không về trống ngay, giữ `cropId` để biết vẽ cây héo của loại nào
       // (`getVisualStage()` trả `growing`, GameScene tự tint xám), xoá mốc thời gian vì không còn gì để tính.
@@ -187,6 +225,7 @@ export class FarmManager {
       tile.harvestCountRemaining = 0
       tile.cycleHours = 0
       tile.isRegrowCycle = false
+      tile.fertilizerId = null
     } else {
       tile.state = 'empty'
       tile.cropId = null
@@ -195,6 +234,7 @@ export class FarmManager {
       tile.harvestCountRemaining = 0
       tile.cycleHours = 0
       tile.isRegrowCycle = false
+      tile.fertilizerId = null
     }
 
     return { cropId, quantity }
@@ -205,6 +245,7 @@ export class FarmManager {
     if (tile.state !== 'withered') return false
     tile.state = 'empty'
     tile.cropId = null
+    tile.fertilizerId = null
     return true
   }
 
@@ -212,12 +253,13 @@ export class FarmManager {
     return hour >= NIGHT_ONLY_HARVEST_START_HOUR || hour < NIGHT_ONLY_HARVEST_END_HOUR
   }
 
-  /** Gọi mỗi frame (GameScene.update) — ô nào đã trồng đủ `cycleHours` thì chuyển sang `ready`. */
+  /** Gọi mỗi frame (GameScene.update) — ô nào đã trồng đủ số giờ cần (đã áp phân bón nếu có, xem
+   * `getEffectiveCycleHours()`) thì chuyển sang `ready`. */
   update(now: number): void {
     for (const tile of this.tiles) {
       if (tile.state !== 'planted' || tile.plantedAt === null) continue
       const elapsedHours = (now - tile.plantedAt) / 3_600_000
-      if (elapsedHours >= tile.cycleHours) tile.state = 'ready'
+      if (elapsedHours >= this.getEffectiveCycleHours(tile)) tile.state = 'ready'
     }
   }
 
@@ -230,7 +272,7 @@ export class FarmManager {
     if (tile.state === 'withered') return 'growing'
     if (tile.state !== 'planted' || tile.cropId === null || tile.plantedAt === null) return null
     if (tile.isRegrowCycle) return 'growing'
-    const progress = (Date.now() - tile.plantedAt) / (tile.cycleHours * 3_600_000)
+    const progress = (Date.now() - tile.plantedAt) / (this.getEffectiveCycleHours(tile) * 3_600_000)
     if (progress >= 0.66) return 'growing'
     if (progress >= 0.33) return 'sprout'
     return 'seed'
@@ -258,7 +300,8 @@ export class FarmManager {
       lastWateredAt: tile.lastWateredAt,
       harvestCountRemaining: tile.harvestCountRemaining,
       cycleHours: tile.cycleHours,
-      isRegrowCycle: tile.isRegrowCycle
+      isRegrowCycle: tile.isRegrowCycle,
+      fertilizerId: tile.fertilizerId
     }))
   }
 
@@ -278,6 +321,8 @@ export class FarmManager {
       tile.harvestCountRemaining = entry.harvestCountRemaining
       tile.cycleHours = entry.cycleHours
       tile.isRegrowCycle = entry.isRegrowCycle
+      // `?? null` — save cũ (trước Sprint 7) không có field này, đọc ra `undefined` chứ không phải `null`.
+      tile.fertilizerId = entry.fertilizerId ?? null
     }
   }
 }
