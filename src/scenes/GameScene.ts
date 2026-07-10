@@ -19,8 +19,12 @@ import {
   ROAST_CHICKEN_PLACEMENT,
   ROAST_CHICKEN_INTERACT_RADIUS
 } from '../data/roastChickenPlacement'
+import { ANIMAL_PEN_SLOTS } from '../data/animalPens'
+import { AnimalManager, type AnimalRuntime } from '../systems/AnimalManager'
+import { FISHING_SPOT } from '../data/fishingSpot'
+import { pickEligibleFish, rollCatchTimeMs } from '../systems/Fishing'
 import { hasSaveGame, loadGame, saveGame } from '../systems/SaveManager'
-import type { SaveState } from '../data/types'
+import type { SaveState, Fish } from '../data/types'
 import { UIScene } from './UIScene'
 import type { CharacterPanel } from '../systems/CharacterPanel'
 
@@ -62,6 +66,30 @@ const MOISTURE_OVERLAY_TEXTURE = 'moisture_overlay'
 const WATER_FX_TEXTURE = 'water_droplet_fx'
 const WELL_TEXTURE = 'farm_well'
 const ROAST_CHICKEN_TEXTURE = 'roast_chicken'
+const ANIMAL_TEXTURE_PREFIX = 'animal_sprite_'
+/** Bán kính (world-px) tính là "đứng đủ gần để cho ăn/thu hoạch" 1 chỗ nuôi — cùng tinh thần
+ * `ROAST_CHICKEN_INTERACT_RADIUS`, đủ rộng để đứng cạnh chuồng là tương tác được, không cần đứng chính xác lên
+ * đúng toạ độ con vật. */
+const ANIMAL_INTERACT_RADIUS = 40
+/** Phạm vi lang thang quanh chỗ đứng gốc (world-px) — nhỏ hơn hẳn khoảng cách giữa các chỗ đứng liền kề trong
+ * `animalPens.ts` (cột cách 115px, hàng cách 65px, mép hàng rào cách chỗ đứng gần nhất ~20-30px) để con vật
+ * không bao giờ đi lấn sang chỗ khác hoặc đè lên hàng rào. */
+const ANIMAL_WANDER_RANGE_X = 20
+const ANIMAL_WANDER_RANGE_Y = 15
+/** Tốc độ "đuổi theo" điểm đích lang thang — hệ số mỗi giây, không phải px/s trực tiếp (di chuyển chậm dần khi
+ * gần tới đích, kiểu lerp, không giật cục như di chuyển tuyến tính đều). */
+const ANIMAL_WANDER_EASE_PER_SEC = 1.2
+/** Sprint 9 — Câu cá. Bảng chỉ báo/mini-game giật đúng lúc phải nổi trên MỌI thứ khác (kể cả bảng Công Cụ
+ * Nông Trại — dù thực tế không mở cùng lúc, tách depth độc lập cho chắc, giống `BULK_ACTIONS_DEPTH`). */
+const FISHING_MINIGAME_DEPTH = BULK_ACTIONS_DEPTH + 1
+/** 1 chu kỳ đi hết chiều dài thanh rồi quay lại (ms) — cùng tốc độ cho MỌI loại cá, độ khó thật sự nằm ở
+ * `sweet_zone_size` (cá càng hiếm, vùng trúng càng hẹp) chứ không phải tốc độ chỉ báo, tránh cộng dồn 2 lớp khó
+ * khác nhau cùng lúc gây khó đoán. */
+const FISHING_INDICATOR_PERIOD_MS = 1200
+/** Quá thời gian này mà chưa bấm Enter đúng lúc thì coi như lỡ tay, cá chạy mất — không để mini-game treo vô
+ * hạn (người chơi bỏ đi làm việc khác giữa chừng vẫn cần tự động kết thúc). */
+const FISHING_MINIGAME_TIMEOUT_MS = 6000
+const GENERIC_ITEM_PLACEHOLDER_TEXTURE = 'generic_item_placeholder'
 const BACKGROUND_KEY = 'farm_background'
 const BACKGROUND_NIGHT_KEY = 'farm_background_night'
 const FARM_TILE_TEXTURES: Record<FarmTileType, string> = {
@@ -145,6 +173,41 @@ export class GameScene extends Phaser.Scene {
    * dùng 1 lần vĩnh viễn. */
   private roastChickenImage!: Phaser.GameObjects.Image
   private roastChickenAvailable = true
+  /** Sprint 8 — chăn nuôi. `animalManager` là STATE thuần (giữ nguyên qua các lần `create()` lại, giống
+   * `farmManager`), `animalImages` là GameObject (phải tạo lại mỗi lần `create()`, giống `cropImages`) —
+   * key của cả 2 map đều là `AnimalRuntime.id`. `animalStatusUI` treo phía trên đúng chỗ đang trỏ vào, giống
+   * `growthStatusUI` của ô đất (chỉ hiện 1 chỗ tại 1 thời điểm, tránh rối mắt). */
+  private animalManager!: AnimalManager
+  private readonly animalImages = new Map<number, Phaser.GameObjects.Image>()
+  /** Đi lang thang quanh chỗ đứng gốc (`slot.x/y` làm tâm) — CHỈ ảnh hưởng hình vẽ, không đổi state thật
+   * (`AnimalRuntime.x/y` giữ nguyên làm mốc tương tác/tìm chỗ gần nhất), nên không cần lưu vào save — reload
+   * trang là random lại vị trí lang thang từ đầu, không sao vì chỉ là tiểu tiết trang trí. */
+  private readonly animalWander = new Map<
+    number,
+    { offsetX: number; offsetY: number; targetX: number; targetY: number; nextChangeAt: number }
+  >()
+  private animalStatusUI?: {
+    slotId: number
+    text: Phaser.GameObjects.Text
+  }
+  /** Sprint 9 — Câu cá. 3 nấc: `idle` (chưa câu) -> `waiting` (đã thả cần, chờ cắn câu — khoá di chuyển giống
+   * menu hạt giống, xem `update()`) -> `minigame` (đã cắn câu, giật đúng lúc trong `FISHING_MINIGAME_TIMEOUT_
+   * MS`). `fishingFish`/`fishingBiteAt` chỉ có giá trị ở nấc `waiting` trở đi. Không lưu vào save — đang câu dở
+   * mà tắt game thì mất, chấp nhận được vì đây là hành động tức thời, không phải state dài hạn như farm/chăn
+   * nuôi. */
+  private fishingState: 'idle' | 'waiting' | 'minigame' = 'idle'
+  private fishingFish: Fish | null = null
+  private fishingBiteAt = 0
+  private fishingMinigameStartAt = 0
+  private fishingWaitingText?: Phaser.GameObjects.Text
+  private fishingHintText?: Phaser.GameObjects.Text
+  private fishingMinigameUI?: {
+    container: Phaser.GameObjects.Container
+    indicator: Phaser.GameObjects.Rectangle
+    sweetStart: number
+    sweetWidth: number
+    barWidth: number
+  }
   /** Lớp phủ tối ban đêm — hình chữ nhật cố định theo camera (`setScrollFactor(0)`), chỉ đổi alpha, không phải
    * world object nên không cần theo dõi vị trí camera thủ công. */
   private nightOverlay!: Phaser.GameObjects.Rectangle
@@ -193,14 +256,14 @@ export class GameScene extends Phaser.Scene {
   private bulkActionsPanelHeight = 0
   private bulkFromInput!: Phaser.GameObjects.DOMElement
   private bulkToInput!: Phaser.GameObjects.DOMElement
-  /** Text kết quả hiện sau khi bấm 1 trong 6 nút (VD: "Đã cuốc 5 ô") — phản hồi tức thời, không cần mở lại
+  /** Text kết quả hiện sau khi bấm 1 trong 7 nút (VD: "Đã cuốc 5 ô") — phản hồi tức thời, không cần mở lại
    * bảng mới thấy. */
   private bulkStatusText!: Phaser.GameObjects.Text
   /** Label của các nút có text đổi động — "Gieo Hạt Tất Cả" (tên hạt đang chọn) và "Bón Phân: ..." (loại phân
    * + số lượng còn lại) — cập nhật lại mỗi lần mở bảng (`openBulkActions()`) hoặc đổi lựa chọn, giữ reference
    * riêng vì 2 nút này đổi label động (4 nút còn lại là text tĩnh). */
   private bulkActionButtonTexts: Phaser.GameObjects.Text[] = []
-  /** Toạ độ/kích thước 6 nút trong bảng (tính 1 lần lúc tạo, xem `createBulkActionsUI()`) — dùng lại để tự
+  /** Toạ độ/kích thước 7 nút trong bảng (tính 1 lần lúc tạo, xem `createBulkActionsUI()`) — dùng lại để tự
    * hit-test thủ công trong `handleBulkActionsClick()`, xem giải thích lý do không dùng `.setInteractive()`
    * trực tiếp trên nút tại chỗ khai báo layout này. */
   private bulkButtonLayout = { width: 0, height: 0, gap: 0, firstY: 0 }
@@ -291,8 +354,10 @@ export class GameScene extends Phaser.Scene {
     this.placeFarmTiles()
     if (isFirstTimeSetup) {
       this.farmManager = new FarmManager(FARM_TILE_PLACEMENTS)
+      this.animalManager = new AnimalManager(ANIMAL_PEN_SLOTS)
       if (savedGame) {
         this.farmManager.loadState(savedGame.farm_tiles)
+        this.animalManager.loadState(savedGame.animals)
         combatManager.loadStats(savedGame.player_stats)
         inventoryManager.loadSlots(savedGame.inventory)
         this.lastKnownPosition = { x: savedGame.player_position.x, y: savedGame.player_position.y }
@@ -416,6 +481,11 @@ export class GameScene extends Phaser.Scene {
       } else if (this.bulkActionsOpen) {
         event.preventDefault()
         this.closeBulkActions()
+      } else if (this.fishingState !== 'idle') {
+        // Bỏ câu giữa chừng (đang chờ cắn câu hoặc đang mini-game) — không phạt gì, chỉ đơn giản huỷ, khác hẳn
+        // "lỡ tay Enter sai lúc" (tính là thất bại thật, cá chạy mất) ở `resolveFishingCatch(false)`.
+        event.preventDefault()
+        this.cancelFishing()
       }
     })
 
@@ -440,7 +510,7 @@ export class GameScene extends Phaser.Scene {
     })
 
     // Click ra ngoài bảng khi menu hạt giống đang mở = đóng menu; bảng Công Cụ Nông Trại thì click BÊN TRONG =
-    // bấm đúng 1 trong 6 nút (tự hit-test thủ công, xem `handleBulkActionsClick()` + giải thích lý do không
+    // bấm đúng 1 trong 7 nút (tự hit-test thủ công, xem `handleBulkActionsClick()` + giải thích lý do không
     // dùng `.setInteractive()` trực tiếp), click ra ngoài = đóng, cùng hành vi Esc. `pointer.x/y` là toạ độ
     // canvas, so trực tiếp được với vị trí container vì mọi bảng đều `setScrollFactor(0)` (cố định theo
     // camera, không lệch theo world scroll). Bảng nhân vật tự xử lý click của riêng nó ở `UIScene` (scene
@@ -478,6 +548,17 @@ export class GameScene extends Phaser.Scene {
       )
     })
 
+    // DEBUG: phím N "nuôi thử" 1 con vật ngẫu nhiên vào đúng chỗ TRỐNG gần nhất trong bán kính tương tác —
+    // Sprint 8 chưa có shop mua con giống thật, đây là lối tắt để BẤT KỲ AI cũng test được cơ chế cho ăn/thu
+    // hoạch ngay trong game, không cần mở devtools console gọi `animalManager.assignAnimal()` thủ công. Bấm
+    // lặp lại (đứng ở chuồng khác) để thả thêm con khác — mỗi lần chọn NGẪU NHIÊN 1 loại hợp lệ của đúng loại
+    // chuồng đó (không xoay vòng tuần tự vì chỉ cần "có con để test", không cần chọn đúng loại cụ thể).
+    this.input.keyboard!.on('keydown-N', (event: KeyboardEvent) => {
+      if (event.repeat) return
+      event.preventDefault()
+      this.debugAssignNearestEmptyPen()
+    })
+
     // Debug: click vào map log toạ độ world (x,y) ra console — tiện dò toạ độ khi viết collisionZones.ts/
     // farmTiles.ts mà không cần mở EditorScene.
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
@@ -495,7 +576,8 @@ export class GameScene extends Phaser.Scene {
       !this.seedMenuOpen &&
       !this.getCharacterPanel()?.isOpen &&
       !this.bulkActionsOpen &&
-      !this.isTransitioning
+      !this.isTransitioning &&
+      this.fishingState === 'idle'
     ) {
       this.player.update()
       this.checkPolygonCollisions(delta)
@@ -511,6 +593,9 @@ export class GameScene extends Phaser.Scene {
     }
     this.farmManager.update(Date.now())
     this.syncFarmVisuals()
+    this.syncAnimalVisuals(delta)
+    this.updateFishing()
+    this.syncFishingHint()
     this.updateInteractionPointer()
     this.timeManager.update(delta)
     this.updateDayNightVisuals()
@@ -524,7 +609,7 @@ export class GameScene extends Phaser.Scene {
       player_id: 'p001',
       gender: 'female',
       farm_tiles: this.farmManager.serialize(),
-      animals: [],
+      animals: this.animalManager.serialize(),
       buildings_built: [],
       farm_decorations: [],
       player_stats: { ...combatManager.getStats() },
@@ -615,6 +700,17 @@ export class GameScene extends Phaser.Scene {
       }
     }
 
+    const animalSlot = this.animalManager.findNearestSlot(feetX, feetY, ANIMAL_INTERACT_RADIUS)
+    if (animalSlot) return { x: animalSlot.x, y: animalSlot.y - 16 }
+
+    if (
+      this.fishingState === 'idle' &&
+      Phaser.Math.Distance.Between(feetX, feetY, FISHING_SPOT.x, FISHING_SPOT.y) <
+        FISHING_SPOT.interactRadius
+    ) {
+      return { x: FISHING_SPOT.x, y: FISHING_SPOT.y - 20 }
+    }
+
     const tile = this.farmManager.findNearestTile(feetX, feetY, FARM_TILE_INTERACT_RADIUS)
     if (tile) return { x: tile.x, y: tile.y - tile.height / 2 }
 
@@ -662,6 +758,13 @@ export class GameScene extends Phaser.Scene {
       return
     }
 
+    if (this.tryInteractWithAnimal()) {
+      this.saveProgress()
+      return
+    }
+
+    if (this.tryInteractWithFishing()) return
+
     const body = this.player.body as Phaser.Physics.Arcade.Body
     const tile = this.farmManager.findNearestTile(
       body.center.x,
@@ -695,7 +798,7 @@ export class GameScene extends Phaser.Scene {
    * vừa hái, bay lên 1 đoạn ngắn rồi mờ dần và biến mất, kèm chữ `+N` báo số lượng vừa cộng vào túi đồ. */
   private playHarvestFx(cropId: string, quantity: number, x: number, y: number) {
     const icon = this.add
-      .image(x, y, this.cropItemTextureKey(cropId))
+      .image(x, y, this.resolveItemFxTexture(cropId))
       .setDisplaySize(24, 24)
       .setDepth(HARVEST_FX_DEPTH)
     const label = this.add
@@ -1116,6 +1219,31 @@ export class GameScene extends Phaser.Scene {
     return `crop_${cropId}_item`
   }
 
+  /** `playHarvestFx()` trước Sprint 8 chỉ từng nhận `cropId` thật (luôn có texture `crop_<id>_item` đã
+   * preload) — sản phẩm chăn nuôi (`chicken_egg`...) KHÔNG có texture riêng nào (chưa gen icon, xem
+   * `art-refs/items/livestock.md`). Tra an toàn: có thì dùng thật, không thì trả về texture xám placeholder
+   * (tạo 1 lần, tái dùng) thay vì để Phaser hiện "missing texture" vỡ hình. */
+  private resolveItemFxTexture(itemId: string): string {
+    const cropKey = this.cropItemTextureKey(itemId)
+    if (this.textures.exists(cropKey)) return cropKey
+    this.createGenericItemPlaceholderTexture()
+    return GENERIC_ITEM_PLACEHOLDER_TEXTURE
+  }
+
+  private createGenericItemPlaceholderTexture() {
+    if (this.textures.exists(GENERIC_ITEM_PLACEHOLDER_TEXTURE)) return
+    const size = 24
+    const canvasTexture = this.textures.createCanvas(GENERIC_ITEM_PLACEHOLDER_TEXTURE, size, size)
+    if (!canvasTexture) return
+    const ctx = canvasTexture.getContext()
+    ctx.fillStyle = '#5a5040'
+    ctx.fillRect(2, 2, size - 4, size - 4)
+    ctx.strokeStyle = '#a08860'
+    ctx.lineWidth = 1.5
+    ctx.strokeRect(2, 2, size - 4, size - 4)
+    canvasTexture.refresh()
+  }
+
   /** Đặt hàng rào gỗ bao quanh khu đất (4 trụ góc + 2 đoạn ngang trên/dưới + 2 đoạn dọc trái/phải), toạ độ tính
    * sẵn trong `data/fencePlacements.ts`. Depth theo `bottomY` (điểm thấp nhất của mảnh hàng rào) để Y-sort đúng
    * với player.y — đứng trên cạnh trên thì bị hàng rào che, đứng dưới cạnh dưới thì che hàng rào. Chỉ trang trí,
@@ -1222,6 +1350,436 @@ export class GameScene extends Phaser.Scene {
     this.roastChickenAvailable = false
     this.roastChickenImage.setVisible(false)
     return true
+  }
+
+  /** Con vật vẽ bằng code (placeholder — `art-refs/items/livestock.md` mô tả icon sản phẩm, chưa có prompt
+   * sprite con vật) — hình bầu dục màu riêng theo loại + 1-2 chi tiết nhận diện tối thiểu (mào gà đỏ, mỏ vịt
+   * vàng, đốm đen bò, len xoăn cừu) để phân biệt 4 loại dù chỉ là khối màu đơn giản. */
+  private createAnimalTexture(animalType: string) {
+    const key = ANIMAL_TEXTURE_PREFIX + animalType
+    if (this.textures.exists(key)) return
+    const size = 28
+    const canvasTexture = this.textures.createCanvas(key, size, size)
+    if (!canvasTexture) return
+    const ctx = canvasTexture.getContext()
+    const cx = size / 2
+    const cy = size / 2 + 2
+
+    const BODY_COLOR: Record<string, string> = {
+      chicken: '#f5f0e6',
+      duck: '#f0e04a',
+      cow: '#f5f0e6',
+      sheep: '#e8e4d8'
+    }
+    ctx.fillStyle = BODY_COLOR[animalType] ?? '#cccccc'
+    ctx.beginPath()
+    ctx.ellipse(cx, cy, size * 0.4, size * 0.32, 0, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.lineWidth = 1.5
+    ctx.strokeStyle = '#6b6050'
+    ctx.stroke()
+
+    if (animalType === 'chicken') {
+      ctx.fillStyle = '#d8362e' // mào gà
+      ctx.beginPath()
+      ctx.arc(cx, cy - size * 0.3, 3, 0, Math.PI * 2)
+      ctx.fill()
+    } else if (animalType === 'duck') {
+      ctx.fillStyle = '#e8952a' // mỏ vịt
+      ctx.beginPath()
+      ctx.ellipse(cx + size * 0.32, cy, 4, 2.5, 0, 0, Math.PI * 2)
+      ctx.fill()
+    } else if (animalType === 'cow') {
+      ctx.fillStyle = '#2a2620' // đốm đen
+      ctx.beginPath()
+      ctx.ellipse(cx - 4, cy - 3, 4, 3, 0.3, 0, Math.PI * 2)
+      ctx.fill()
+      ctx.beginPath()
+      ctx.ellipse(cx + 5, cy + 4, 3, 2, -0.2, 0, Math.PI * 2)
+      ctx.fill()
+    } else if (animalType === 'sheep') {
+      ctx.strokeStyle = '#cfc8b0'
+      ctx.lineWidth = 1
+      for (let i = 0; i < 5; i++) {
+        ctx.beginPath()
+        ctx.arc(cx - size * 0.25 + i * 5, cy - size * 0.15, 3, 0, Math.PI * 2)
+        ctx.stroke()
+      }
+    }
+
+    canvasTexture.refresh()
+  }
+
+  /** Gọi mỗi frame (giống `syncFarmVisuals()`) — tạo/xoá ảnh con vật theo đúng `animalType` của từng chỗ nuôi,
+   * và hiện trạng thái (đói/sẵn sàng thu hoạch) CHỈ ở đúng chỗ đang trỏ vào — cùng bài học đã rút ra với
+   * `syncGrowthStatusUI()`: hiện tràn lan ở mọi chỗ cùng lúc sẽ rối mắt, và phải đặt cao hơn player mới thấy rõ
+   * (`GROWTH_STATUS_DEPTH`, nổi trên mọi thứ trong world kể cả player). */
+  private syncAnimalVisuals(delta: number) {
+    const body = this.player.body as Phaser.Physics.Arcade.Body
+    const pointedSlot = this.animalManager.findNearestSlot(
+      body.center.x,
+      body.bottom,
+      ANIMAL_INTERACT_RADIUS
+    )
+
+    for (const slot of this.animalManager.getSlots()) {
+      const image = this.animalImages.get(slot.id)
+      if (slot.animalType !== null) {
+        this.createAnimalTexture(slot.animalType)
+        const textureKey = ANIMAL_TEXTURE_PREFIX + slot.animalType
+        const wanderPos = this.updateAnimalWander(slot.id, delta)
+        if (!image) {
+          this.animalImages.set(
+            slot.id,
+            this.add
+              .image(slot.x + wanderPos.x, slot.y + wanderPos.y, textureKey)
+              .setDisplaySize(26, 26)
+              .setDepth(slot.y + wanderPos.y)
+          )
+        } else {
+          if (image.texture.key !== textureKey) image.setTexture(textureKey)
+          image.setPosition(slot.x + wanderPos.x, slot.y + wanderPos.y)
+          image.setDepth(slot.y + wanderPos.y)
+        }
+      } else if (image) {
+        image.destroy()
+        this.animalImages.delete(slot.id)
+        this.animalWander.delete(slot.id)
+      }
+    }
+
+    this.syncAnimalStatusUI(pointedSlot)
+  }
+
+  /** Đi lang thang loanh quanh chỗ đứng gốc — cứ mỗi 2-4s (thực) chọn 1 điểm đích MỚI ngẫu nhiên trong phạm vi
+   * ±ANIMAL_WANDER_RANGE_X/Y quanh tâm, rồi tự trôi dần tới đó (dịch chuyển theo tỉ lệ khoảng cách còn lại mỗi
+   * frame — chậm dần khi gần tới đích, không giật cục). Phạm vi cố tình nhỏ hơn khoảng cách giữa các chỗ đứng
+   * liền kề (xem `animalPens.ts`) để không bao giờ đi lấn sang chỗ khác hoặc đè lên hàng rào. */
+  private updateAnimalWander(slotId: number, delta: number): { x: number; y: number } {
+    let wander = this.animalWander.get(slotId)
+    if (!wander) {
+      wander = { offsetX: 0, offsetY: 0, targetX: 0, targetY: 0, nextChangeAt: 0 }
+      this.animalWander.set(slotId, wander)
+    }
+
+    const now = Date.now()
+    if (now >= wander.nextChangeAt) {
+      wander.targetX = Phaser.Math.Between(-ANIMAL_WANDER_RANGE_X, ANIMAL_WANDER_RANGE_X)
+      wander.targetY = Phaser.Math.Between(-ANIMAL_WANDER_RANGE_Y, ANIMAL_WANDER_RANGE_Y)
+      wander.nextChangeAt = now + Phaser.Math.Between(2000, 4000)
+    }
+
+    const ease = Math.min(1, (delta / 1000) * ANIMAL_WANDER_EASE_PER_SEC)
+    wander.offsetX += (wander.targetX - wander.offsetX) * ease
+    wander.offsetY += (wander.targetY - wander.offsetY) * ease
+
+    return { x: wander.offsetX, y: wander.offsetY }
+  }
+
+  /** Tạo/xoá/cập nhật đúng 1 chữ trạng thái cho chỗ nuôi đang trỏ vào — huỷ hẳn khi đứng ra xa hoặc đổi sang
+   * chỗ khác (không giữ ẩn), giống `syncGrowthStatusUI()`. */
+  private syncAnimalStatusUI(pointedSlot: AnimalRuntime | undefined) {
+    if (!pointedSlot) {
+      if (this.animalStatusUI) {
+        this.animalStatusUI.text.destroy()
+        this.animalStatusUI = undefined
+      }
+      return
+    }
+
+    if (this.animalStatusUI && this.animalStatusUI.slotId !== pointedSlot.id) {
+      this.animalStatusUI.text.destroy()
+      this.animalStatusUI = undefined
+    }
+
+    const label =
+      pointedSlot.animalType === null
+        ? 'Trống — bấm N để thả thử 1 con'
+        : this.animalManager.isProductReady(pointedSlot)
+          ? 'Sẵn sàng thu hoạch! (Enter)'
+          : pointedSlot.cycleStartAt === null
+            ? 'Đang đói — cho ăn (Enter)'
+            : 'Đang nuôi...'
+
+    if (!this.animalStatusUI) {
+      this.animalStatusUI = {
+        slotId: pointedSlot.id,
+        text: this.add
+          .text(pointedSlot.x, pointedSlot.y - 28, label, {
+            fontSize: '10px',
+            color: '#ffe9a8',
+            fontFamily: 'monospace',
+            backgroundColor: '#00000088',
+            padding: { x: 3, y: 1 }
+          })
+          .setOrigin(0.5)
+          .setDepth(GROWTH_STATUS_DEPTH)
+      }
+    } else {
+      this.animalStatusUI.text.setText(label)
+    }
+  }
+
+  /** Enter khi đứng gần 1 chỗ nuôi đang có con vật — đúng 1 trong 2 hành động tuỳ trạng thái: sản phẩm đã sẵn
+   * sàng thì THU HOẠCH (không quan tâm đang đói hay không — đã đủ giờ là có sản phẩm); chưa sẵn sàng và CHƯA
+   * cho ăn từ đầu chu kỳ thì CHO ĂN (trừ đúng 1 `animal_feed` trong túi đồ, không đủ thì báo qua console — chưa
+   * có toast UI riêng cho trường hợp này, xem giải thích ở `docs/planning/progress.md` Sprint 8). Đang giữa chu
+   * kỳ (đã cho ăn, chưa đủ giờ) thì Enter không làm gì — chưa có gì để làm lúc đó. Trả về `true` nếu vừa xử lý
+   * xong 1 hành động (để `interactWithFarmTile()` return sớm, không rơi tiếp xuống nhánh ô đất). */
+  private tryInteractWithAnimal(): boolean {
+    const body = this.player.body as Phaser.Physics.Arcade.Body
+    const slot = this.animalManager.findNearestOccupiedSlot(
+      body.center.x,
+      body.bottom,
+      ANIMAL_INTERACT_RADIUS
+    )
+    if (!slot) return false
+
+    if (this.animalManager.isProductReady(slot)) {
+      const result = this.animalManager.collectProduct(slot.id)
+      if (!result) return false
+      inventoryManager.addItem(result.productItem, 1)
+      this.playHarvestFx(result.productItem, 1, slot.x, slot.y)
+      return true
+    }
+
+    if (slot.cycleStartAt === null) {
+      if (!inventoryManager.removeItem('animal_feed', 1)) {
+        console.log('[chăn nuôi] không đủ Thức ăn chăn nuôi trong túi đồ')
+        return true
+      }
+      this.animalManager.feed(slot.id)
+      return true
+    }
+
+    return true
+  }
+
+  /** Xem giải thích ở nơi bind phím N — chưa có shop mua con giống thật (Sprint 8), đây là lối tắt DEBUG duy
+   * nhất để đưa con vật vào chuồng ngay trong game. Tìm chỗ TRỐNG gần nhất trong bán kính tương tác, chọn
+   * ngẫu nhiên 1 loại con hợp lệ của đúng `pen_type` chuồng đó (bỏ qua nếu không có chỗ trống nào gần hoặc
+   * không có loại con nào khớp — không nên xảy ra vì cả 2 chuồng đều có ít nhất 1 loại con phù hợp trong
+   * `animals.json`). */
+  private debugAssignNearestEmptyPen() {
+    const body = this.player.body as Phaser.Physics.Arcade.Body
+    let nearest: AnimalRuntime | undefined
+    let nearestDistance = ANIMAL_INTERACT_RADIUS
+    for (const slot of this.animalManager.getSlots()) {
+      if (slot.animalType !== null) continue
+      const distance = Math.hypot(slot.x - body.center.x, slot.y - body.bottom)
+      if (distance <= nearestDistance) {
+        nearest = slot
+        nearestDistance = distance
+      }
+    }
+    if (!nearest) {
+      console.log('[debug] không có chỗ nuôi TRỐNG nào gần đây (đứng gần hơn 1 chuồng)')
+      return
+    }
+    const candidates = GameData.animals.filter((a) => a.pen_type === nearest!.penType)
+    if (candidates.length === 0) return
+    const animal = candidates[Math.floor(Math.random() * candidates.length)]
+    this.animalManager.assignAnimal(nearest.id, animal.id)
+    console.log(`[debug] đã thả ${animal.name} vào chỗ nuôi #${nearest.id}`)
+  }
+
+  /** Enter khi đứng gần `FISHING_SPOT` (Sprint 9) — đúng 1 hành động tuỳ `fishingState`: `minigame` thì đây là
+   * cú GIẬT (kiểm tra chỉ báo có đang nằm trong vùng trúng không); `waiting` thì Enter không làm gì (đã thả cần
+   * rồi, chỉ còn chờ) nhưng vẫn trả `true` để không rơi tiếp xuống tương tác ô đất; `idle` mà đứng đủ gần thì
+   * THẢ CẦN — chọn sẵn 1 loại cá + thời gian chờ cắn câu ngay lúc này (không đợi tới lúc cắn câu mới chọn), che
+   * giấu khỏi người chơi tới khi thật sự câu xong (giữ đúng cảm giác "không biết cá gì đang cắn câu"). */
+  private tryInteractWithFishing(): boolean {
+    if (this.fishingState === 'minigame') {
+      this.attemptFishingCatch()
+      return true
+    }
+    if (this.fishingState === 'waiting') return true
+
+    const body = this.player.body as Phaser.Physics.Arcade.Body
+    const distance = Math.hypot(FISHING_SPOT.x - body.center.x, FISHING_SPOT.y - body.bottom)
+    if (distance > FISHING_SPOT.interactRadius) return false
+
+    this.startFishingCast()
+    return true
+  }
+
+  /** Chọn cá đủ điều kiện theo Luck hiện tại (`combatManager.getTotalLuck()`) + ngày/đêm (`timeManager.
+   * getIsNight()`) tại địa điểm `"river"` (V1 chỉ có đúng 1 vùng nước, xem `fishingSpot.ts`), rồi random thời
+   * gian chờ cắn câu trong khoảng `catch_time_min/max` của đúng con cá đó. Không có cá nào đủ điều kiện (không
+   * nên xảy ra vì Common luôn `luck_required: 0`) thì huỷ ngay, không vào trạng thái `waiting`. */
+  private startFishingCast() {
+    const luck = combatManager.getTotalLuck()
+    const isNight = this.timeManager.getIsNight()
+    const fish = pickEligibleFish('river', luck, isNight)
+    if (!fish) return
+
+    this.fishingFish = fish
+    this.fishingBiteAt = Date.now() + rollCatchTimeMs(fish)
+    this.fishingState = 'waiting'
+    this.fishingWaitingText = this.add
+      .text(FISHING_SPOT.x, FISHING_SPOT.y - 20, 'Đang thả câu...\n(Esc: thu cần)', {
+        fontSize: '10px',
+        color: '#bfe8ff',
+        fontFamily: 'monospace',
+        backgroundColor: '#00000088',
+        padding: { x: 3, y: 1 },
+        align: 'center'
+      })
+      .setOrigin(0.5)
+      .setDepth(GROWTH_STATUS_DEPTH)
+  }
+
+  /** Gọi mỗi frame (giống `syncFarmVisuals()`/`syncAnimalVisuals()`) — CHỈ có việc khi đang `waiting` (dò xem
+   * đã tới lúc cắn câu chưa) hoặc `minigame` (cập nhật vị trí chỉ báo + tự huỷ nếu quá `FISHING_MINIGAME_
+   * TIMEOUT_MS` mà chưa giật kịp). Nấc `idle` không làm gì, return sớm cho rẻ. */
+  private updateFishing() {
+    if (this.fishingState === 'idle') return
+
+    const now = Date.now()
+
+    if (this.fishingState === 'waiting') {
+      if (now >= this.fishingBiteAt) this.showFishingMinigame()
+      return
+    }
+
+    // fishingState === 'minigame'
+    if (!this.fishingMinigameUI) return
+    if (now - this.fishingMinigameStartAt > FISHING_MINIGAME_TIMEOUT_MS) {
+      this.resolveFishingCatch(false)
+      return
+    }
+    const phase =
+      ((now - this.fishingMinigameStartAt) % FISHING_INDICATOR_PERIOD_MS) /
+      FISHING_INDICATOR_PERIOD_MS
+    const t = phase < 0.5 ? phase * 2 : 2 - phase * 2 // tam giác 0->1->0, mượt hơn răng cưa giật cục
+    const halfBar = this.fishingMinigameUI.barWidth / 2
+    this.fishingMinigameUI.indicator.x = -halfBar + t * this.fishingMinigameUI.barWidth
+  }
+
+  /** Gợi ý "Enter: Câu cá" khi đứng đủ gần `FISHING_SPOT` lúc `idle` — CHỈ hiện lúc `idle` vì `waiting`/
+   * `minigame` đã có text riêng của chúng (`fishingWaitingText`/bảng mini-game), tránh chồng chữ lên nhau.
+   * Cùng quy tắc "chỉ hiện 1 chỗ đang trỏ vào" đã áp dụng cho ô đất/chuồng trại. */
+  private syncFishingHint() {
+    const body = this.player.body as Phaser.Physics.Arcade.Body
+    const nearSpot =
+      this.fishingState === 'idle' &&
+      Phaser.Math.Distance.Between(body.center.x, body.bottom, FISHING_SPOT.x, FISHING_SPOT.y) <
+        FISHING_SPOT.interactRadius
+
+    if (!nearSpot) {
+      this.fishingHintText?.destroy()
+      this.fishingHintText = undefined
+      return
+    }
+
+    if (!this.fishingHintText) {
+      this.fishingHintText = this.add
+        .text(FISHING_SPOT.x, FISHING_SPOT.y - 20, 'Enter: Câu cá', {
+          fontSize: '11px',
+          color: '#bfe8ff',
+          fontFamily: 'monospace',
+          backgroundColor: '#00000088',
+          padding: { x: 3, y: 1 }
+        })
+        .setOrigin(0.5)
+        .setDepth(GROWTH_STATUS_DEPTH)
+    }
+  }
+
+  /** Cá đã cắn câu — huỷ text "Đang thả câu...", dựng bảng mini-game cố định theo camera (`setScrollFactor(0)`,
+   * giữa màn hình dưới thấp, giống vị trí menu hạt giống): 1 thanh ngang, 1 vùng "trúng" (`sweet_zone_size` của
+   * đúng con cá đã chọn lúc thả câu) đặt ở vị trí NGẪU NHIÊN trên thanh, 1 chỉ báo chạy qua chạy lại theo tam
+   * giác đều — bấm Enter đúng lúc chỉ báo nằm trong vùng trúng (xem `attemptFishingCatch()`). */
+  private showFishingMinigame() {
+    this.fishingWaitingText?.destroy()
+    this.fishingWaitingText = undefined
+    this.fishingState = 'minigame'
+    this.fishingMinigameStartAt = Date.now()
+
+    const barWidth = 220
+    const barHeight = 14
+    const fish = this.fishingFish!
+    const sweetWidth = Phaser.Math.Clamp(fish.sweet_zone_size, 0.05, 1) * barWidth
+    const sweetStart = Math.random() * (barWidth - sweetWidth)
+
+    const bar = this.add
+      .rectangle(0, 0, barWidth, barHeight, 0x123047, 0.9)
+      .setStrokeStyle(2, 0xbfe8ff)
+    const sweetZone = this.add.rectangle(
+      -barWidth / 2 + sweetStart + sweetWidth / 2,
+      0,
+      sweetWidth,
+      barHeight,
+      0x4ade80,
+      0.85
+    )
+    const indicator = this.add.rectangle(-barWidth / 2, 0, 4, barHeight + 8, 0xffe066, 1)
+    const label = this.add
+      .text(0, -18, 'Bấm Enter đúng lúc!', {
+        fontSize: '12px',
+        color: '#ffffff',
+        fontFamily: 'monospace'
+      })
+      .setOrigin(0.5)
+
+    const container = this.add
+      .container(this.scale.width / 2, this.scale.height - 90, [bar, sweetZone, indicator, label])
+      .setScrollFactor(0)
+      .setDepth(FISHING_MINIGAME_DEPTH)
+
+    this.fishingMinigameUI = { container, indicator, sweetStart, sweetWidth, barWidth }
+  }
+
+  /** Enter trong lúc `minigame` — trúng nếu vị trí hiện tại của chỉ báo (đã cộng lại nửa thanh để so cùng hệ
+   * quy chiếu `sweetStart`, vốn tính từ mép trái thanh) nằm trong khoảng `[sweetStart, sweetStart+sweetWidth]`. */
+  private attemptFishingCatch() {
+    if (!this.fishingMinigameUI) return
+    const indicatorPos = this.fishingMinigameUI.indicator.x + this.fishingMinigameUI.barWidth / 2
+    const { sweetStart, sweetWidth } = this.fishingMinigameUI
+    const success = indicatorPos >= sweetStart && indicatorPos <= sweetStart + sweetWidth
+    this.resolveFishingCatch(success)
+  }
+
+  /** Kết thúc 1 lượt câu (thành công hay thất bại đều gọi hàm này) — dọn UI mini-game, trả về `idle`. Thành
+   * công thì cộng cá vào túi đồ + hiệu ứng bay lên tại `FISHING_SPOT` (tái dùng `playHarvestFx()`/
+   * `resolveItemFxTexture()` y hệt thu hoạch nông sản/chăn nuôi) + lưu progress ngay (đổi inventory, đúng quy
+   * tắc lưu sau hành động quan trọng). Thất bại chỉ báo 1 dòng chữ ngắn tự biến mất, không có gì để lưu. */
+  private resolveFishingCatch(success: boolean) {
+    const fish = this.fishingFish
+    this.fishingMinigameUI?.container.destroy()
+    this.fishingMinigameUI = undefined
+    this.fishingFish = null
+    this.fishingState = 'idle'
+
+    if (success && fish) {
+      inventoryManager.addItem(fish.id, 1)
+      this.playHarvestFx(fish.id, 1, FISHING_SPOT.x, FISHING_SPOT.y - 10)
+      this.saveProgress()
+    } else {
+      const missText = this.add
+        .text(FISHING_SPOT.x, FISHING_SPOT.y - 20, 'Cá đã chạy mất...', {
+          fontSize: '11px',
+          color: '#ffb4b4',
+          fontFamily: 'monospace',
+          backgroundColor: '#00000088',
+          padding: { x: 3, y: 1 }
+        })
+        .setOrigin(0.5)
+        .setDepth(GROWTH_STATUS_DEPTH)
+      this.time.delayedCall(1500, () => missText.destroy())
+    }
+  }
+
+  /** Esc giữa chừng (`waiting` hoặc `minigame`) — huỷ hẳn, không phạt, không cộng gì. Khác `resolveFishingCatch
+   * (false)`: đó là THẤT BẠI thật (đã bấm Enter sai lúc/hết giờ mini-game), còn đây là người chơi TỰ Ý bỏ câu
+   * (ví dụ đổi ý giữa lúc đang chờ cắn câu). */
+  private cancelFishing() {
+    this.fishingWaitingText?.destroy()
+    this.fishingWaitingText = undefined
+    this.fishingMinigameUI?.container.destroy()
+    this.fishingMinigameUI = undefined
+    this.fishingFish = null
+    this.fishingState = 'idle'
   }
 
   /** Bóng đổ dùng chung cho mọi prop tĩnh đứng trên mặt đất (hàng rào, nhà...) — dùng lại `SHADOW_TEXTURE` của
@@ -1434,14 +1992,14 @@ export class GameScene extends Phaser.Scene {
   /** Tạo sẵn 1 lần bảng Công Cụ Nông Trại (ẩn ban đầu) — cùng kiểu bảng xanh ngọc/viền sáng với 2 bảng trên
    * cho đồng bộ UI. 2 ô nhập số (`bulkFromInput`/`bulkToInput`) là DOM Element thật (input HTML đè lên canvas,
    * xem comment ở khai báo field) — tắt hẳn bàn phím Phaser lúc đang gõ (`focus`/`blur`) để không vô tình bắn
-   * trúng phím tắt 1 chữ khác (G/T/I/F...) đang lắng nghe toàn cục, xem giải thích trong `main.ts`. 6 nút bấm
+   * trúng phím tắt 1 chữ khác (G/T/I/F...) đang lắng nghe toàn cục, xem giải thích trong `main.ts`. 7 nút bấm
    * còn lại vẽ bằng `Rectangle`+`Text` (giống mọi UI khác trong file này, không cần asset riêng) — 2 nút cuối
    * (Sprint 7) là chọn/bón phân bón, xem `cycleFertilizerSelection()`/`fertilizeAllInRange()`. */
   private createBulkActionsUI() {
     const panelWidth = 300
-    // +80 so với ban đầu (300) — đủ chỗ cho 2 nút phân bón mới (Sprint 7), mọi offset dọc khác (title/label/
-    // input/nút/status) đều tính theo `panelHeight/2` nên tự giãn theo, không cần sửa tay từng chỗ.
-    const panelHeight = 380
+    // +40 so với Sprint 7 (380) — đủ chỗ cho nút "Cho Ăn Tất Cả" mới (Sprint 8), mọi offset dọc khác (title/
+    // label/input/nút/status) đều tính theo `panelHeight/2` nên tự giãn theo, không cần sửa tay từng chỗ.
+    const panelHeight = 420
     this.bulkActionsPanelWidth = panelWidth
     this.bulkActionsPanelHeight = panelHeight
     const centerX = this.scale.width / 2
@@ -1511,7 +2069,8 @@ export class GameScene extends Phaser.Scene {
       'Gieo Hạt Tất Cả',
       'Thu Hoạch Tất Cả',
       'Bón Phân: (chưa chọn)',
-      'Bón Phân Tất Cả'
+      'Bón Phân Tất Cả',
+      'Cho Ăn Tất Cả (Vật Nuôi)'
     ]
     const buttonObjects: Phaser.GameObjects.GameObject[] = []
     this.bulkActionButtonTexts = []
@@ -1624,7 +2183,7 @@ export class GameScene extends Phaser.Scene {
     )
   }
 
-  /** Tự hit-test 6 nút bằng toạ độ (thay cho `.setInteractive()`, xem giải thích ở `createBulkActionsUI()`) —
+  /** Tự hit-test 7 nút bằng toạ độ (thay cho `.setInteractive()`, xem giải thích ở `createBulkActionsUI()`) —
    * quy `pointer.x/y` (toạ độ canvas) về hệ toạ độ LOCAL của container (trừ đi vị trí container), rồi so với
    * đúng khối chữ nhật của từng nút đã lưu trong `bulkButtonLayout`. */
   private handleBulkActionsClick(pointer: Phaser.Input.Pointer) {
@@ -1637,7 +2196,8 @@ export class GameScene extends Phaser.Scene {
       () => this.plantAllInRange(),
       () => this.harvestAllInRange(),
       () => this.cycleFertilizerSelection(),
-      () => this.fertilizeAllInRange()
+      () => this.fertilizeAllInRange(),
+      () => this.feedAllAnimals()
     ]
     actions.forEach((action, index) => {
       const buttonY = firstY + index * (height + gap)
@@ -1648,7 +2208,7 @@ export class GameScene extends Phaser.Scene {
         localY <= buttonY + height / 2
       if (insideButton) action()
     })
-    this.saveProgress() // Sprint 6 — cả 6 nút đều là hành động quan trọng (thao tác hàng loạt), lưu ngay sau đó.
+    this.saveProgress() // Sprint 6 — cả 7 nút đều là hành động quan trọng (thao tác hàng loạt), lưu ngay sau đó.
   }
 
   /** Đọc khoảng ID từ 2 ô nhập — ô trống (hoặc không phải số) coi như "không giới hạn" phía đó, đúng yêu cầu
@@ -1771,5 +2331,21 @@ export class GameScene extends Phaser.Scene {
     }
     this.bulkStatusText.setText(`Đã bón phân cho ${count} ô`)
     this.refreshFertilizerButtonLabel()
+  }
+
+  /** Cho ăn MỌI chỗ nuôi đang có con vật VÀ chưa bắt đầu chu kỳ (`cycleStartAt === null`) — không áp dụng
+   * khoảng ID từ 2 ô nhập (khác 4 nút nông trại phía trên) vì chỗ nuôi dùng KHÔNG GIAN ID riêng (0-5, xem
+   * `AnimalManager`), tái dùng chung khoảng ID của Ô ĐẤT sẽ gây hiểu lầm 2 con số trùng nhau nhưng khác ý
+   * nghĩa. Trừ đúng 1 `animal_feed`/chỗ, dừng ngay khi hết thức ăn giữa chừng — giống hệt cách
+   * `fertilizeAllInRange()` dừng khi hết phân bón. */
+  private feedAllAnimals() {
+    let count = 0
+    for (const slot of this.animalManager.getSlots()) {
+      if (slot.animalType === null || slot.cycleStartAt !== null) continue
+      if (!inventoryManager.removeItem('animal_feed', 1)) break
+      this.animalManager.feed(slot.id)
+      count++
+    }
+    this.bulkStatusText.setText(`Đã cho ăn ${count} chỗ nuôi`)
   }
 }

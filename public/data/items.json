@@ -9,5 +9,159 @@
     "description": "Quặng sắt khai thác từ mỏ đá.",
     "source": ["mine", "golem_drop"],
     "crafting_tag": ["metal", "smithing"]
+  },
+  {
+    "id": "animal_feed",
+    "name": "Thức ăn chăn nuôi",
+    "type": "consumable",
+    "rarity": "common",
+    "sell_price": 5,
+    "stack_max": 99,
+    "description": "Cho vật nuôi ăn — thiếu ăn thì ngưng sản xuất (không chết).",
+    "source": ["shop"],
+    "crafting_tag": []
+  },
+  {
+    "id": "chicken_egg",
+    "name": "Trứng gà",
+    "type": "material",
+    "rarity": "common",
+    "sell_price": 50,
+    "stack_max": 99,
+    "description": "Trứng gà tươi, thu hoạch từ Gà đã cho ăn đủ.",
+    "source": ["livestock"],
+    "crafting_tag": ["cooking"]
+  },
+  {
+    "id": "duck_egg",
+    "name": "Trứng vịt",
+    "type": "material",
+    "rarity": "common",
+    "sell_price": 80,
+    "stack_max": 99,
+    "description": "Trứng vịt tươi, thu hoạch từ Vịt đã cho ăn đủ.",
+    "source": ["livestock"],
+    "crafting_tag": ["cooking"]
+  },
+  {
+    "id": "fresh_milk",
+    "name": "Sữa tươi",
+    "type": "material",
+    "rarity": "common",
+    "sell_price": 500,
+    "stack_max": 99,
+    "description": "Sữa tươi, thu hoạch từ Bò đã cho ăn đủ.",
+    "source": ["livestock"],
+    "crafting_tag": ["cooking"]
+  },
+  {
+    "id": "raw_wool",
+    "name": "Len thô",
+    "type": "material",
+    "rarity": "common",
+    "sell_price": 1000,
+    "stack_max": 99,
+    "description": "Len thô, thu hoạch từ Cừu đã cho ăn đủ.",
+    "source": ["livestock"],
+    "crafting_tag": ["weaving"]
+  },
+  {
+    "id": "crucian_carp",
+    "name": "Cá Diếc",
+    "type": "fish",
+    "rarity": "common",
+    "sell_price": 20,
+    "stack_max": 99,
+    "description": "Cá nước ngọt phổ biến, câu được ở sông.",
+    "source": ["fishing"],
+    "crafting_tag": ["cooking"]
+  },
+  {
+    "id": "perch",
+    "name": "Cá Rô",
+    "type": "fish",
+    "rarity": "common",
+    "sell_price": 35,
+    "stack_max": 99,
+    "description": "Cá nước ngọt phổ biến, câu được ở sông.",
+    "source": ["fishing"],
+    "crafting_tag": ["cooking"]
+  },
+  {
+    "id": "carp",
+    "name": "Cá Chép",
+    "type": "fish",
+    "rarity": "common",
+    "sell_price": 55,
+    "stack_max": 99,
+    "description": "Cá nước ngọt phổ biến, câu được ở sông.",
+    "source": ["fishing"],
+    "crafting_tag": ["cooking"]
+  },
+  {
+    "id": "salmon",
+    "name": "Cá Hồi",
+    "type": "fish",
+    "rarity": "rare",
+    "sell_price": 150,
+    "stack_max": 99,
+    "description": "Cá hiếm, cần đủ May Mắn mới câu được.",
+    "source": ["fishing"],
+    "crafting_tag": ["cooking"]
+  },
+  {
+    "id": "big_goldfish",
+    "name": "Cá Vàng Lớn",
+    "type": "fish",
+    "rarity": "rare",
+    "sell_price": 280,
+    "stack_max": 99,
+    "description": "Cá hiếm, cần đủ May Mắn mới câu được.",
+    "source": ["fishing"],
+    "crafting_tag": ["cooking"]
+  },
+  {
+    "id": "squid",
+    "name": "Cá Mực",
+    "type": "fish",
+    "rarity": "rare",
+    "sell_price": 400,
+    "stack_max": 99,
+    "description": "Cá hiếm, chỉ xuất hiện ban đêm, cần đủ May Mắn mới câu được.",
+    "source": ["fishing"],
+    "crafting_tag": ["cooking"]
+  },
+  {
+    "id": "swordfish",
+    "name": "Cá Kiếm",
+    "type": "fish",
+    "rarity": "epic",
+    "sell_price": 700,
+    "stack_max": 99,
+    "description": "Cá cực hiếm, cần rất nhiều May Mắn mới câu được.",
+    "source": ["fishing"],
+    "crafting_tag": ["cooking"]
+  },
+  {
+    "id": "small_dragonfish",
+    "name": "Cá Rồng Nhỏ",
+    "type": "fish",
+    "rarity": "epic",
+    "sell_price": 1100,
+    "stack_max": 99,
+    "description": "Cá cực hiếm, cần rất nhiều May Mắn mới câu được.",
+    "source": ["fishing"],
+    "crafting_tag": ["cooking"]
+  },
+  {
+    "id": "butterflyfish",
+    "name": "Cá Bướm",
+    "type": "fish",
+    "rarity": "epic",
+    "sell_price": 1500,
+    "stack_max": 99,
+    "description": "Cá cực hiếm, chỉ xuất hiện ban đêm, cần rất nhiều May Mắn mới câu được.",
+    "source": ["fishing"],
+    "crafting_tag": ["cooking"]
   }
 ]
