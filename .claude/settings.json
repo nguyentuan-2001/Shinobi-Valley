@@ -42,7 +42,32 @@
       "Bash(grep -iE \"\\\\.env|\\\\.key$|\\\\.pem$|credential|token|secret\")",
       "Bash(git commit -m ' *)",
       "Bash(xargs ls -la)",
-      "Bash(xargs -n1 basename)"
+      "Bash(xargs -n1 basename)",
+      "Bash(node \"C:\\\\Users\\\\kent\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--Game-shinobi-valley\\\\1296a1a0-24bd-4144-8701-3ccde2f9b9af\\\\scratchpad\\\\check-village-portal.cjs\")",
+      "Bash(node \"C:\\\\Users\\\\kent\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--Game-shinobi-valley\\\\1296a1a0-24bd-4144-8701-3ccde2f9b9af\\\\scratchpad\\\\test-village.cjs\")",
+      "Bash(node \"C:\\\\Users\\\\kent\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--Game-shinobi-valley\\\\1296a1a0-24bd-4144-8701-3ccde2f9b9af\\\\scratchpad\\\\test-village2.cjs\")",
+      "Bash(node \"C:\\\\Users\\\\kent\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--Game-shinobi-valley\\\\1296a1a0-24bd-4144-8701-3ccde2f9b9af\\\\scratchpad\\\\test-village3.cjs\")",
+      "Bash(node \"C:\\\\Users\\\\kent\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--Game-shinobi-valley\\\\1296a1a0-24bd-4144-8701-3ccde2f9b9af\\\\scratchpad\\\\check-404.cjs\")",
+      "Bash(rm -f /tmp/vite-dev.log 2>/dev/null; true)",
+      "Bash(node \"C:\\\\Users\\\\kent\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--Game-shinobi-valley\\\\1296a1a0-24bd-4144-8701-3ccde2f9b9af\\\\scratchpad\\\\test-old-save.cjs\")",
+      "Bash(node \"C:\\\\Users\\\\kent\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--Game-shinobi-valley\\\\1296a1a0-24bd-4144-8701-3ccde2f9b9af\\\\scratchpad\\\\test-sprint11.cjs\")",
+      "Bash(rm -rf d:/Game/shinobi-valley/.dev-check-output)",
+      "Bash(node \"C:\\\\Users\\\\kent\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--Game-shinobi-valley\\\\1296a1a0-24bd-4144-8701-3ccde2f9b9af\\\\scratchpad\\\\debug-defdown.cjs\")",
+      "Bash(node \"C:\\\\Users\\\\kent\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--Game-shinobi-valley\\\\1296a1a0-24bd-4144-8701-3ccde2f9b9af\\\\scratchpad\\\\test-sprint11-passives.cjs\")",
+      "Bash(node \"C:\\\\Users\\\\kent\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--Game-shinobi-valley\\\\1296a1a0-24bd-4144-8701-3ccde2f9b9af\\\\scratchpad\\\\test-sprint11-visual.cjs\")",
+      "Bash(node \"C:\\\\Users\\\\kent\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--Game-shinobi-valley\\\\1296a1a0-24bd-4144-8701-3ccde2f9b9af\\\\scratchpad\\\\test-sprint12.cjs\")",
+      "Bash(node \"C:\\\\Users\\\\kent\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--Game-shinobi-valley\\\\1296a1a0-24bd-4144-8701-3ccde2f9b9af\\\\scratchpad\\\\debug-rungtre.cjs\")",
+      "Bash(grep -n \"entryPoint: { x: 80, y: 350 }\\\\|entryPoint: { x: COMBAT_MAP_WIDTH - 80, y: 350 }\" src/data/mapTransitions.ts)",
+      "Bash(sed -i -e 's/entryPoint: { x: 80, y: 350 }/entryPoint: { x: 150, y: 350 }/g' -e 's/entryPoint: { x: COMBAT_MAP_WIDTH - 80, y: 350 }/entryPoint: { x: COMBAT_MAP_WIDTH - 150, y: 350 }/g' src/data/mapTransitions.ts)",
+      "Bash(grep -n \"entryPoint: { x: 150, y: 350 }\\\\|entryPoint: { x: COMBAT_MAP_WIDTH - 150, y: 350 }\" src/data/mapTransitions.ts)",
+      "Bash(node \"C:\\\\Users\\\\kent\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--Game-shinobi-valley\\\\1296a1a0-24bd-4144-8701-3ccde2f9b9af\\\\scratchpad\\\\test-corruption-only.cjs\")",
+      "Bash(node \"C:\\\\Users\\\\kent\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--Game-shinobi-valley\\\\1296a1a0-24bd-4144-8701-3ccde2f9b9af\\\\scratchpad\\\\test-visual-final.cjs\")",
+      "Bash(node \"C:\\\\Users\\\\kent\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--Game-shinobi-valley\\\\1296a1a0-24bd-4144-8701-3ccde2f9b9af\\\\scratchpad\\\\test-respawn.cjs\")",
+      "Bash(node \"C:\\\\Users\\\\kent\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--Game-shinobi-valley\\\\1296a1a0-24bd-4144-8701-3ccde2f9b9af\\\\scratchpad\\\\test-respawn-10s.cjs\")",
+      "Bash(node \"C:\\\\Users\\\\kent\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--Game-shinobi-valley\\\\1296a1a0-24bd-4144-8701-3ccde2f9b9af\\\\scratchpad\\\\test-peaceful.cjs\")"
+    ],
+    "additionalDirectories": [
+      "\\tmp"
     ]
   }
 }
