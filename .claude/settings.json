@@ -64,7 +64,8 @@
       "Bash(node \"C:\\\\Users\\\\kent\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--Game-shinobi-valley\\\\1296a1a0-24bd-4144-8701-3ccde2f9b9af\\\\scratchpad\\\\test-visual-final.cjs\")",
       "Bash(node \"C:\\\\Users\\\\kent\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--Game-shinobi-valley\\\\1296a1a0-24bd-4144-8701-3ccde2f9b9af\\\\scratchpad\\\\test-respawn.cjs\")",
       "Bash(node \"C:\\\\Users\\\\kent\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--Game-shinobi-valley\\\\1296a1a0-24bd-4144-8701-3ccde2f9b9af\\\\scratchpad\\\\test-respawn-10s.cjs\")",
-      "Bash(node \"C:\\\\Users\\\\kent\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--Game-shinobi-valley\\\\1296a1a0-24bd-4144-8701-3ccde2f9b9af\\\\scratchpad\\\\test-peaceful.cjs\")"
+      "Bash(node \"C:\\\\Users\\\\kent\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--Game-shinobi-valley\\\\1296a1a0-24bd-4144-8701-3ccde2f9b9af\\\\scratchpad\\\\test-peaceful.cjs\")",
+      "Bash(git restore *)"
     ],
     "additionalDirectories": [
       "\\tmp"
