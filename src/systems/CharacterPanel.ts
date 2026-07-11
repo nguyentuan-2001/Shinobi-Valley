@@ -1,5 +1,5 @@
 import Phaser from 'phaser'
-import type { ArmorSlot } from '../data/types'
+import type { ArmorSlot, Skill } from '../data/types'
 import { GameData } from '../data/DataLoader'
 import { combatManager, type PotentialStat } from './CombatManager'
 import { inventoryManager } from './InventoryManager'
@@ -380,7 +380,7 @@ export class CharacterPanel {
         })
       )
       const detail = unlocked
-        ? `MP: ${skill.mp_cost} · CD: ${skill.cooldown}s · Dame ×${skill.damage_multiplier}`
+        ? this.describeSkillDetail(skill)
         : `Yêu cầu cấp ${skill.unlock_level}`
       objects.push(
         this.scene.add.text(-PANEL_WIDTH / 2 + 30, y + 18, detail, {
@@ -402,6 +402,21 @@ export class CharacterPanel {
       )
     }
     this.contentContainer.add(objects)
+  }
+
+  /** Sprint 11 — dòng mô tả ngắn cho 1 chiêu ĐÃ MỞ KHOÁ, khác nhau theo `type` vì Passive/Buff không có
+   * "MP/CD/Dame" giống chiêu Active thường (hiện dòng cũ cho Passive sẽ ra "MP: 0 · CD: 0s · Dame ×0", vô nghĩa
+   * — sửa luôn khi phát hiện lúc điền đủ 50 chiêu). */
+  private describeSkillDetail(skill: Skill): string {
+    if (skill.type === 'passive') {
+      const proc = skill.proc_chance > 0 ? ` (${Math.round(skill.proc_chance * 100)}% cơ hội)` : ''
+      return `Passive (luôn có hiệu lực khi cầm đúng hệ)${proc}`
+    }
+    if (skill.type === 'buff') {
+      return `MP: ${skill.mp_cost} · CD: ${skill.cooldown}s · Buff ${skill.effect_duration}s`
+    }
+    const hitsNote = skill.hits > 1 ? ` ×${skill.hits} hit` : ''
+    return `MP: ${skill.mp_cost} · CD: ${skill.cooldown}s · Dame ×${skill.damage_multiplier}${hitsNote}`
   }
 
   /** Thông tin — bảng chỉ số tổng hợp (gốc + bonus trang bị/vũ khí, đúng `getTotal*()` của `CombatManager`),
@@ -494,7 +509,8 @@ export class CharacterPanel {
       y += slotBoxHeight + slotGap
     }
 
-    drawSlotBox('Vũ khí', weapon?.name ?? stats.weapon_id, () => {
+    const weaponLabel = this.canChangeWeaponClass() ? 'Vũ khí' : 'Vũ khí (chỉ đổi được ở Nông Trại)'
+    drawSlotBox(weaponLabel, weapon?.name ?? stats.weapon_id, () => {
       this.cycleWeapon()
       this.renderActiveTab()
     })
@@ -542,7 +558,16 @@ export class CharacterPanel {
     this.contentContainer.add(objects)
   }
 
+  /** Case 11 (combat.md): "Đổi hệ vũ khí/class: chỉ thực hiện được tại nhà (Ngôi Nhà Nông Trại)... không đổi
+   * được giữa lúc đang ở map chiến đấu/đang trong combat". Đơn giản hoá thành "đang ở scene Farm" (không kiểm
+   * thêm khoảng cách tới đúng ngôi nhà — bảng nhân vật vốn không biết vị trí player trong world, chỉ biết scene
+   * nào đang chạy qua `this.scene.scene.isActive()`) thay vì bắt đứng đúng vị trí ngôi nhà. */
+  private canChangeWeaponClass(): boolean {
+    return this.scene.scene.isActive('GameScene')
+  }
+
   private cycleWeapon(): void {
+    if (!this.canChangeWeaponClass()) return
     const ids = GameData.weapons.map((w) => w.id)
     if (ids.length === 0) return
     const current = combatManager.getStats().weapon_id

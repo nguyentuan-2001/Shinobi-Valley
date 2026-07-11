@@ -132,6 +132,41 @@ export interface Armor {
   enhancement_max: number
 }
 
+/** Field CHỈ dùng cho `type: 'passive'` (Sprint 11) — đọc theo đúng yêu cầu `dev-schedule.md`: "hệ thống áp
+ * dụng Passive (đọc `passive_stat`/`passive_condition`/`proc_chance`)". `passive_stat` là 1 trong tập giá trị cố
+ * định mà `CombatManager`/combat resolution biết cách áp dụng (xem `PassiveEngine.ts`) — KHÔNG phải free-form,
+ * mỗi giá trị mới cần thêm code xử lý tương ứng. `passive_condition: 'always'` nghĩa là bonus có hiệu lực ngay
+ * khi đủ cấp + đúng hệ vũ khí, không cần điều kiện gì thêm; các giá trị khác mô tả điều kiện runtime cụ thể
+ * (xem docstring `PassiveEngine.ts` cho danh sách đầy đủ + cách mỗi điều kiện được diễn giải). `proc_chance`
+ * dùng cho chiêu #9 (Proc) — xác suất 0-1, `null` cho 3 passive còn lại (không phải loại proc). */
+export type PassiveStat =
+  | 'def_percent'
+  | 'hp_flat'
+  | 'dodge_percent'
+  | 'move_speed_percent'
+  | 'attack_speed_percent'
+  | 'cooldown_reduction_percent'
+  | 'range_percent'
+  | 'atk_percent'
+  | 'ranged_incoming_damage_reduction_percent'
+  | 'combo_3rd_hit_damage_percent'
+  | 'debuffed_target_damage_percent'
+  | 'def_down_target_damage_percent'
+  | 'stationary_crit_percent'
+  | 'crit_stun_chance'
+  | 'basic_attack_lifesteal_chance'
+  | 'basic_attack_slow_chance'
+  | 'moving_attack_speed_percent'
+  | 'free_shot_every_n_hits'
+  | 'crit_cooldown_reduction_percent'
+  | 'low_hp_shield'
+  | null
+
+/** Field CHỈ dùng cho `type: 'buff'` (tự buff bản thân, khác `effect`/`effect_duration` vốn áp lên MỤC TIÊU bị
+ * đánh trúng — xem `docs/gameplay/combat.md`: Hào quang kiếm/Xạ điêu thủ/Bóng tối đều là buff tự thân theo thời
+ * gian, tái dùng luôn `effect_duration` làm thời lượng buff cho đỡ thêm field mới). */
+export type BuffStat = 'atk_percent' | 'crit_percent' | 'stealth_guaranteed_crit' | null
+
 export interface Skill {
   id: string
   name: string
@@ -148,6 +183,18 @@ export interface Skill {
   effect: SkillEffect
   effect_duration: number
   type: SkillType
+  passive_stat: PassiveStat
+  passive_condition: string | null
+  /** Độ lớn CHÍNH của passive (đơn vị tuỳ `passive_stat`: % cho hầu hết, số nguyên tuyệt đối cho `hp_flat`/
+   * `free_shot_every_n_hits`/giây stun của `crit_stun_chance`) — xem bảng đầy đủ trong docstring
+   * `PassiveEngine.ts`. Không dùng cho Active/Buff (luôn 0). */
+  passive_value: number
+  proc_chance: number
+  buff_stat: BuffStat
+  buff_value: number
+  /** Chỉ `true` cho đúng 1 chiêu Ultimate có ghi rõ "Crit 100%" trong `combat.md` (Vô ảnh kiếm, hệ Kiếm Sĩ) —
+   * các Ultimate khác chỉ ghi hệ số sát thương lớn, không có cơ chế crit đảm bảo riêng, nên giữ `false`. */
+  guaranteed_crit: boolean
 }
 
 export interface MonsterDrop {
@@ -388,4 +435,13 @@ export interface SaveState {
   inventory: Array<{ itemId: string; quantity: number }>
   game_time: GameTimeState
   player_position: PlayerPositionState
+  /** Sprint 10 — điểm quan hệ/mốc nói chuyện/tặng quà từng NPC. Kiểu tối giản, không import ngược
+   * `NpcRelationshipRuntime` từ `systems/`, giống cách `inventory` ở trên tránh phụ thuộc ngược — khớp cấu
+   * trúc 1-1 với `NpcRelationshipManager.serialize()`. */
+  npc_relationships: Array<{
+    npcId: string
+    points: number
+    lastTalkedAt: number | null
+    lastGiftAt: number | null
+  }>
 }

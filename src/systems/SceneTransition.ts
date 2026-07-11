@@ -27,6 +27,33 @@ export function checkExitZones(
   return null
 }
 
+export interface GatedExitCheck {
+  /** Zone hợp lệ để chuyển màn NGAY (đứng đúng trong zone + đủ cấp nếu zone có `minLevel`) — `null` nếu không
+   * đứng trong zone nào hoặc đứng trong zone có `minLevel` nhưng chưa đủ cấp. */
+  zone: ExitZoneDef | null
+  /** Cấp cần thiết nếu đang đứng ĐÚNG trong 1 zone bị khoá cấp (để scene hiện thông báo "cần Lv X") — `null`
+   * nếu không đứng trong zone nào hoặc zone đó không khoá cấp. */
+  blockedByLevel: number | null
+}
+
+/** Sprint 12 — bản mở rộng của `checkExitZones()` có kiểm thêm `ExitZoneDef.minLevel` (map chiến đấu Lv10+ theo
+ * `docs/world/maps.md`). Tách hàm riêng thay vì sửa `checkExitZones()` gốc vì Farm/Village/Bãi Tập Luyện/Đồng Cỏ
+ * (chiều vào) không cần biết khái niệm cấp độ tối thiểu — giữ hàm gốc đơn giản, chỗ nào cần khoá cấp mới gọi
+ * bản này. */
+export function checkGatedExitZones(
+  playerX: number,
+  playerY: number,
+  zones: readonly ExitZoneDef[],
+  currentLevel: number
+): GatedExitCheck {
+  const zone = checkExitZones(playerX, playerY, zones)
+  if (!zone) return { zone: null, blockedByLevel: null }
+  if (zone.minLevel && currentLevel < zone.minLevel) {
+    return { zone: null, blockedByLevel: zone.minLevel }
+  }
+  return { zone, blockedByLevel: null }
+}
+
 /** Fade-out màn hình đen rồi chuyển scene, mang theo toạ độ Entry Point của map đích qua `data` (scene đích tự
  * đọc ở `create(data)`). Dừng `UIScene` trước khi chuyển vì `scene.start()` chỉ dừng CHÍNH scene đang gọi, không
  * đụng tới các scene được `launch()` song song khác — scene đích sẽ tự `scene.launch('UIScene')` lại. */

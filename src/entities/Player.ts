@@ -1,9 +1,9 @@
 import Phaser from 'phaser'
+import type { Skill } from '../data/types'
+import { combatManager } from '../systems/CombatManager'
 
 export type Gender = 'men' | 'women' | 'vegeta'
 type Facing = 'front' | 'back' | 'left' | 'right'
-
-const SPEED = 140
 /** `vegeta`: ghép từ 3 mảnh đầu/thân/chân rời (`public/assets/sprites/player/vegeta/raw/`, do user cung cấp) —
  * cả 5 action đều dùng CHUNG đúng 1 kích thước cell (152×190) vì field `FRAME_SIZES` này chỉ nhận 1 size duy
  * nhất cho toàn bộ giới tính (không tách theo action như `frameSizes` ở `PreloadScene.ts`), khác nếu để mỗi
@@ -60,6 +60,15 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   private isAttacking = false
   private readonly shadow: Phaser.GameObjects.Image
   private readonly shadowOffsetY: number
+  /** Sprint 11 — dùng cho passive Cung Thủ "Nhãn Lực Tập Trung" (+Crit khi đứng yên ≥1s) và "Cung Pháp Tốc Xạ"
+   * (+Attack Speed khi đang di chuyển) — `-Infinity` ban đầu nghĩa là "chưa từng di chuyển", coi như đã đứng
+   * yên đủ lâu ngay từ đầu. */
+  private lastMovedAt = -Infinity
+  private currentlyMoving = false
+  /** Sprint 12 — hệ số tốc độ do MÔI TRƯỜNG áp đặt (vd bão tuyết Núi Tuyết -10%), tách biệt hoàn toàn khỏi
+   * `combatManager.getTotalMoveSpeed()` (chỉ số nhân vật) — scene chiến đấu tự gọi `setEnvironmentSpeedMultiplier()`
+   * 1 lần lúc `create()` nếu map đó có cơ chế giảm tốc, mặc định 1 (không ảnh hưởng) cho mọi map khác. */
+  private environmentSpeedMultiplier = 1
 
   constructor(scene: Phaser.Scene, x: number, y: number, gender: Gender = 'men') {
     super(scene, x, y, `player_${gender}_idle_front`, 0)
@@ -157,11 +166,14 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     const moving = vx !== 0 || vy !== 0
     if (moving) {
       const len = Math.hypot(vx, vy)
-      this.setVelocity((vx / len) * SPEED, (vy / len) * SPEED)
+      const speed = combatManager.getTotalMoveSpeed() * this.environmentSpeedMultiplier
+      this.setVelocity((vx / len) * speed, (vy / len) * speed)
       this.facing = this.determineFacing()
+      this.lastMovedAt = this.scene.time.now
     } else {
       this.setVelocity(0, 0)
     }
+    this.currentlyMoving = moving
 
     this.updateAnimation(moving)
   }
@@ -190,15 +202,46 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     return !this.isAttacking
   }
 
-  startAttack(payload: { damageMultiplier?: number } = {}): boolean {
+  /** Sprint 11 — passive Cung Thủ "Cung Pháp Tốc Xạ" (kiting): đơn giản hoá thành "đang di chuyển" thay vì thật
+   * sự kiểm tra "đang lùi RA XA mục tiêu" (cần vector khoảng cách đang tăng/giảm qua từng frame, phức tạp hơn
+   * hẳn cho lợi ích tương đương ở V1) — xem giải thích đầy đủ trong `docs/planning/progress.md` Sprint 11. */
+  isMoving(): boolean {
+    return this.currentlyMoving
+  }
+
+  /** Sprint 11 — passive Cung Thủ "Nhãn Lực Tập Trung" (+Crit khi đứng yên ≥1s trước khi bắn). */
+  getStationaryDurationMs(): number {
+    return this.scene.time.now - this.lastMovedAt
+  }
+
+  /** Sprint 12 — Núi Tuyết "bão tuyết làm giảm tốc độ di chuyển 10%" (`docs/world/maps.md`): scene gọi 1 lần
+   * lúc `create()` với `0.9`, mọi map khác không gọi nên giữ mặc định `1`. */
+  setEnvironmentSpeedMultiplier(multiplier: number): void {
+    this.environmentSpeedMultiplier = multiplier
+  }
+
+  /** Sprint 11: `skill: null` = đòn đánh thường (Space, multiplier 1.0, hitbox melee mặc định qua
+   * `getAttackHitboxBounds()`); có `skill` = chiêu từ hotbar (Enter) — scene tự đọc toàn bộ field của `skill`
+   * (hits/range/aoe/effect/passive liên quan...) từ payload `attack` thay vì chỉ mỗi `damageMultiplier` như bản
+   * Sprint 5 cũ, đủ để xử lý multi-hit/AOE/hiệu ứng trạng thái mà không cần Player.ts biết gì thêm về combat. */
+  startAttack(skill: Skill | null = null): boolean {
     if (this.isAttacking) return false
     this.isAttacking = true
+    const wasMoving = this.currentlyMoving
     this.setVelocity(0, 0)
-    this.play(`player_${this.gender}_attack`, true)
+    // Sprint 11 — Attack Speed giờ THẬT SỰ ảnh hưởng tốc độ ra đòn (trước đó chỉ là chỉ số hiển thị, không đụng
+    // gì animation — bug phát hiện lúc làm passive "Tốc Kiếm Liên Hoàn"/"Cung Pháp Tốc Xạ", xem progress.md
+    // Sprint 11): animation attack chạy nhanh hơn theo đúng hệ số, `isAttacking` clear ngay khi animation xong
+    // (ANIMATION_COMPLETE listener có sẵn) nên ra đòn nhanh hơn thật, không chỉ là hình ảnh nhanh hơn suông.
+    const attackSpeed = combatManager.getEffectiveAttackSpeed(wasMoving)
+    this.play({ key: `player_${this.gender}_attack`, frameRate: 12 * attackSpeed }, true)
+    // Sprint 11 — chỉ đòn ĐÁNH THƯỜNG (skill null) mới tính vào bộ đếm dùng cho passive "Trọng Kiếm Tích Lực"/
+    // "Bách Xạ Quán Nhật" (xem docstring `CombatManager.registerBasicAttack()`) — chiêu Enter không tính.
+    if (!skill) combatManager.registerBasicAttack()
     // Đánh dấu "vừa vung vũ khí" ngay lúc bắt đầu animation (không đợi animation chạy xong) — Sprint 5 chưa cần
     // khớp chính xác frame nào trong animation là lúc lưỡi kiếm thật sự chạm tới (cần rig hitbox theo từng
     // frame, việc của khi có animation thật đủ chi tiết), tính hit ngay lúc bấm cho đơn giản/phản hồi tức thời.
-    this.emit('attack', { damageMultiplier: payload.damageMultiplier ?? 1 })
+    this.emit('attack', { skill })
     return true
   }
 
@@ -207,8 +250,28 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
    * Kích thước/khoảng đưa ra tạm ước lượng theo cỡ 1 ô Người Rơm/quái (~32px) — chưa cần rig theo asset vũ khí
    * thật vì animation attack hiện chỉ có 1 bản quay mặt ra trước, không đổi theo hệ vũ khí. */
   getAttackHitboxBounds(): Phaser.Geom.Rectangle {
-    const reach = 34
-    const size = 42
+    return this.computeHitboxRect(34, 42)
+  }
+
+  /** Sprint 11 — hitbox cho chiêu thức (khác đòn thường): `range: "ranged"` kéo dài tầm với hẳn (giả lập tên/phi
+   * tiêu bay xa mà không cần dựng entity projectile thật/animation bay riêng — đơn giản hoá, xem progress.md
+   * Sprint 11), `aoe: true` nới rộng cả tầm với LẪN bề ngang theo `aoe_radius` (dùng chung 1 hình chữ nhật cho
+   * mọi trường hợp AOE thay vì dựng vùng tròn quanh tâm riêng — kể cả chiêu AOE quanh thân như "Vũ kiếm" hay
+   * AOE tại điểm xa như "Thiên hà thương" đều đi qua cùng công thức này). Passive Thương Sĩ "Thương Pháp Quảng
+   * Vực" (+20% tầm đánh, `range_percent`) nhân thêm vào cả tầm với lẫn bề ngang nếu đang active. */
+  getSkillHitboxBounds(skill: Skill): Phaser.Geom.Rectangle {
+    const rangeBonusPercent = combatManager.getActivePassive('range_percent')?.passive_value ?? 0
+    const rangeMultiplier = 1 + rangeBonusPercent / 100
+    let reach = (skill.range === 'ranged' ? 170 : 34) * rangeMultiplier
+    let size = 42 * rangeMultiplier
+    if (skill.aoe) {
+      reach += skill.aoe_radius
+      size += skill.aoe_radius * 2
+    }
+    return this.computeHitboxRect(reach, size)
+  }
+
+  private computeHitboxRect(reach: number, size: number): Phaser.Geom.Rectangle {
     const offsets: Record<Facing, { x: number; y: number }> = {
       front: { x: 0, y: reach },
       back: { x: 0, y: -reach },

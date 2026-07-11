@@ -4,6 +4,7 @@ import { WILD_RABBIT_TEXTURE, HIT_SPARK_TEXTURE } from '../systems/CombatTexture
 import { combatManager } from '../systems/CombatManager'
 import { inventoryManager } from '../systems/InventoryManager'
 import { computeDamage } from '../systems/CombatSystem'
+import { StatusEffectTracker, type StatusEffectType } from '../systems/StatusEffectTracker'
 
 /** ~5-8 ô theo `docs/gameplay/mechanics.md` mục "Cơ chế Kẻ Địch" (Tầm phát hiện) — quy đổi tạm 1 ô ≈ 32px world
  * (chưa có lưới tile thật ở các map chiến đấu, xem `GrasslandScene`/`TrainingGroundScene`). */
@@ -14,10 +15,11 @@ const CHASE_SPEED = 70
 const PATROL_SPEED = 30
 const CONTACT_DAMAGE_COOLDOWN_MS = 1000
 const CONTACT_RANGE = 20
-/** "Hồi sinh kẻ địch: toàn bộ kẻ địch trong khu vực hồi sinh 5 phút sau khi vào lại khu vực (hoặc sau 30 phút
- * thực)" — bản đơn giản ở Sprint 5 chỉ dùng mốc thời gian cố định (5 phút) kể từ lúc chết, chưa phân biệt
- * "vào lại khu vực" (cần theo dõi transition ra/vào phức tạp hơn, để dành khi có nhiều map chiến đấu thật). */
-const RESPAWN_MS = 5 * 60 * 1000
+/** User yêu cầu đổi từ 5 phút xuống 10 giây thực — khớp đúng nhịp hồi sinh của Người Rơm ở Bãi Tập Luyện
+ * (`TrainingDummy.RESPAWN_MS`, cũng vừa đổi xuống 10s cùng lúc) — mốc thời gian cố định kể từ lúc chết, chưa
+ * phân biệt "vào lại khu vực" (cần theo dõi transition ra/vào phức tạp hơn, không cần thiết với mốc ngắn thế
+ * này). */
+const RESPAWN_MS = 10 * 1000
 
 /** Quái thường (khác hẳn `TrainingDummy`) — HP/ATK/DEF thật từ `monsters.json`, AI đơn giản patrol quanh điểm
  * spawn khi chưa thấy người chơi, đuổi theo khi trong tầm phát hiện. Chết thật sự cộng EXP/gold/drop đồ (qua
@@ -39,6 +41,9 @@ export class Monster extends Phaser.Physics.Arcade.Sprite {
   private patrolWaitUntil = 0
   private readonly hpBarBg: Phaser.GameObjects.Rectangle
   private readonly hpBarFill: Phaser.GameObjects.Rectangle
+  /** Sprint 11 — hiệu ứng trạng thái (poison/bleed/slow/stun/burn/def_down) áp lên quái này từ chiêu thức người
+   * chơi, xem `StatusEffectTracker.ts`. */
+  private readonly statusEffects = new StatusEffectTracker()
 
   constructor(scene: Phaser.Scene, x: number, y: number, data: MonsterData, id: number) {
     super(scene, x, y, WILD_RABBIT_TEXTURE)
@@ -75,36 +80,82 @@ export class Monster extends Phaser.Physics.Arcade.Sprite {
   }
 
   /** Scene cần DEF gốc để tự tính damage bằng `computeDamage()` TRƯỚC khi gọi `takeDamage()` — giữ công thức
-   * tính toán tập trung ở 1 chỗ (`CombatSystem.ts`) thay vì lặp lại bên trong class này. */
-  getDef(): number {
-    return this.monsterData.def
+   * tính toán tập trung ở 1 chỗ (`CombatSystem.ts`) thay vì lặp lại bên trong class này. Sprint 11: nhân thêm hệ
+   * số Def Down đang active (nếu có) — `now` mặc định `Date.now()` cho tiện gọi từ nơi không có sẵn `scene.time.
+   * now` (hiếm khi cần), scene chiến đấu luôn truyền `this.time.now` thật. */
+  getDef(now: number = Date.now()): number {
+    return this.monsterData.def * this.statusEffects.getDefDownMultiplier(now)
+  }
+
+  /** Sprint 11 — áp 1 hiệu ứng trạng thái từ chiêu thức người chơi (case 9 combat.md: refresh không cộng dồn,
+   * xem `StatusEffectTracker.apply()`). Scene gọi hàm này ngay sau khi xác định hit trúng + skill có `effect`. */
+  applyStatusEffect(
+    type: StatusEffectType,
+    durationSeconds: number,
+    magnitude: number,
+    now: number
+  ): void {
+    if (this.deadState) return
+    this.statusEffects.apply(type, durationSeconds * 1000, magnitude, now)
+  }
+
+  hasAnyStatusEffect(now: number): boolean {
+    return this.statusEffects.hasAnyActiveEffect(now)
+  }
+
+  hasDefDown(now: number): boolean {
+    return this.statusEffects.hasDefDown(now)
   }
 
   /** Gọi mỗi frame từ scene (patrol/chase/dam sát thương tiếp xúc lên player) — nhận toạ độ player trực tiếp
-   * thay vì tự import `Player` để tránh phụ thuộc vòng, giống cách `resolvePolygonCollision` nhận sprite ngoài. */
-  updateAi(playerX: number, playerY: number, time: number): void {
+   * thay vì tự import `Player` để tránh phụ thuộc vòng, giống cách `resolvePolygonCollision` nhận sprite ngoài.
+   * `combatStarted` (user yêu cầu): quái CHỈ phát hiện/đuổi theo/gây sát thương khi người chơi đã chủ động đánh
+   * trúng ít nhất 1 quái TRONG MAP NÀY từ trước (`CombatEngine.hasCombatStarted()`) — chưa từng đánh ai thì đi
+   * ngang qua bao gần cũng chỉ patrol bình thường, không bị tấn công. */
+  updateAi(playerX: number, playerY: number, time: number, combatStarted: boolean): void {
     if (this.deadState) return
     this.setDepth(this.y)
     this.updateHpBarPosition()
 
+    // Sprint 11 — tick DOT (Poison/Bleed/Burn) trước AI, dừng ngay nếu DOT vừa giết chết quái (case 6 combat.md:
+    // `takeDamage()` tự set `deadState`, các bước AI phía dưới sẽ bị chặn ở early-return đầu hàm lần gọi kế).
+    const dotDamage = this.statusEffects.update(time)
+    if (dotDamage > 0) this.takeDamage(Math.round(dotDamage))
+    if (this.deadState) return
+
+    // Case "khống chế": đang Stun thì đứng im hoàn toàn, không patrol/chase/gây sát thương tiếp xúc.
+    if (this.statusEffects.isStunned(time)) {
+      this.setVelocity(0, 0)
+      return
+    }
+
+    const slowMultiplier = this.statusEffects.getSlowSpeedMultiplier(time)
     const distToPlayer = Phaser.Math.Distance.Between(this.x, this.y, playerX, playerY)
-    if (distToPlayer <= DETECT_RADIUS || (this.isChasing && distToPlayer <= LOSE_AGGRO_RADIUS)) {
+    const shouldEngage =
+      combatStarted &&
+      (distToPlayer <= DETECT_RADIUS || (this.isChasing && distToPlayer <= LOSE_AGGRO_RADIUS))
+    if (shouldEngage) {
       this.isChasing = true
-      this.chase(playerX, playerY)
+      this.chase(playerX, playerY, slowMultiplier)
       if (distToPlayer <= CONTACT_RANGE) this.dealContactDamage(time)
     } else {
       this.isChasing = false
-      this.patrol(time)
+      this.patrol(time, slowMultiplier)
     }
   }
 
-  private chase(playerX: number, playerY: number): void {
+  /** `speedMultiplier` (Sprint 11): hệ số Slow đang active, xem `StatusEffectTracker.getSlowSpeedMultiplier()` —
+   * 1 nếu không bị Slow. */
+  private chase(playerX: number, playerY: number, speedMultiplier: number): void {
     const angle = Phaser.Math.Angle.Between(this.x, this.y, playerX, playerY)
-    this.setVelocity(Math.cos(angle) * CHASE_SPEED, Math.sin(angle) * CHASE_SPEED)
+    this.setVelocity(
+      Math.cos(angle) * CHASE_SPEED * speedMultiplier,
+      Math.sin(angle) * CHASE_SPEED * speedMultiplier
+    )
     this.setFlipX(Math.cos(angle) < 0)
   }
 
-  private patrol(time: number): void {
+  private patrol(time: number, speedMultiplier: number): void {
     const distToTarget = Phaser.Math.Distance.Between(
       this.x,
       this.y,
@@ -125,7 +176,10 @@ export class Monster extends Phaser.Physics.Arcade.Sprite {
       this.patrolTarget.x,
       this.patrolTarget.y
     )
-    this.setVelocity(Math.cos(angle) * PATROL_SPEED, Math.sin(angle) * PATROL_SPEED)
+    this.setVelocity(
+      Math.cos(angle) * PATROL_SPEED * speedMultiplier,
+      Math.sin(angle) * PATROL_SPEED * speedMultiplier
+    )
     this.setFlipX(Math.cos(angle) < 0)
   }
 
@@ -142,12 +196,14 @@ export class Monster extends Phaser.Physics.Arcade.Sprite {
   /** Case ngoài combat.md nhưng cần thiết cho AI đuổi bắt: quái chạm player gây damage trực tiếp (không phải
    * player tấn công quái — chiều ngược lại, xem `takeDamage()`), có cooldown tránh trừ máu liên tục mỗi frame
    * khi đang dính sát. Gọi thẳng `combatManager.takeDamage()` vì đây là biến đổi state PLAYER, không phải state
-   * của Monster này — không cần scene làm trung gian. */
+   * của Monster này — không cần scene làm trung gian. Sprint 11: roll né đòn (Song Kiếm Passive "Thân Pháp
+   * Khinh Vũ") TRƯỚC khi tính damage — né được thì bỏ qua hẳn, không vào `takeDamage()`/khiên Ninja gì cả. */
   private dealContactDamage(time: number): void {
     if (time - this.lastContactDamageAt < CONTACT_DAMAGE_COOLDOWN_MS) return
     this.lastContactDamageAt = time
+    if (combatManager.rollDodge()) return
     const result = computeDamage(this.monsterData.atk, 1, combatManager.getTotalDef(), 0)
-    combatManager.takeDamage(result.damage)
+    combatManager.takeDamage(result.damage, time)
   }
 
   /** Case 1 (combat.md): công thức damage chuẩn, roll Crit riêng — `damageMultiplier`/`critChance` truyền từ

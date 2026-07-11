@@ -6,12 +6,13 @@ import {
 } from '../systems/CombatTextures'
 
 const HITS_TO_DIE = 5
-const RESPAWN_MS = 15_000
+const RESPAWN_MS = 10_000
 
 /** Người Rơm (Training Dummy) — cơ chế HOÀN TOÀN KHÁC `Monster` (xem `docs/gameplay/mechanics.md` mục
  * "Người Rơm"): không HP/ATK/DEF, không công thức damage, chỉ đếm đủ 5 lần trúng đòn thì "chết" (despawn +
- * hiệu ứng rơm vỡ), không EXP/gold/drop, hồi sinh sau ĐÚNG 15 giây thực tại đúng vị trí ban đầu — khác hẳn quái
- * thường (5 phút/30 phút, xem `Monster.ts`). Đứng yên tuyệt đối, không aggro, dùng static body. */
+ * hiệu ứng rơm vỡ), không EXP/gold/drop, hồi sinh sau ĐÚNG 10 giây thực tại đúng vị trí ban đầu — cùng mốc thời
+ * gian với quái thường (`Monster.ts`, cũng vừa đổi xuống 10s theo yêu cầu user, thống nhất 1 nhịp hồi sinh cho
+ * cả 2 loại). Đứng yên tuyệt đối, không aggro, dùng static body. */
 export class TrainingDummy extends Phaser.Physics.Arcade.Sprite {
   /** ID ổn định để `TargetSelector` (xem `systems/TargetSelector.ts`) nhớ đang ngắm con nào giữa các frame. */
   readonly id: number

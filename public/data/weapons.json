@@ -19,5 +19,86 @@
     "unlock_level": 1,
     "enhancement_max": 10,
     "sub_stats": []
+  },
+  {
+    "id": "iron_dual_sword",
+    "name": "Song kiếm sắt",
+    "type": "weapon",
+    "weapon_class": "dual_sword",
+    "rank": "common",
+    "atk": 18,
+    "atk_multiplier": 1.0,
+    "crit_bonus": 0,
+    "attack_speed_bonus": 0.1,
+    "skill_class": "dual_swordsman",
+    "buy_price": 600,
+    "sell_price": 240,
+    "craft_recipe": {
+      "iron_ore": 6,
+      "wood": 6
+    },
+    "unlock_level": 5,
+    "enhancement_max": 10,
+    "sub_stats": []
+  },
+  {
+    "id": "bamboo_spear",
+    "name": "Giáo tre",
+    "type": "weapon",
+    "weapon_class": "spear",
+    "rank": "common",
+    "atk": 22,
+    "atk_multiplier": 1.0,
+    "crit_bonus": 0,
+    "attack_speed_bonus": 0,
+    "skill_class": "spearman",
+    "buy_price": 400,
+    "sell_price": 160,
+    "craft_recipe": {
+      "wood": 10
+    },
+    "unlock_level": 1,
+    "enhancement_max": 10,
+    "sub_stats": []
+  },
+  {
+    "id": "wooden_bow",
+    "name": "Cung gỗ",
+    "type": "weapon",
+    "weapon_class": "bow",
+    "rank": "common",
+    "atk": 18,
+    "atk_multiplier": 1.0,
+    "crit_bonus": 2,
+    "attack_speed_bonus": 0,
+    "skill_class": "archer",
+    "buy_price": 350,
+    "sell_price": 140,
+    "craft_recipe": {
+      "wood": 8
+    },
+    "unlock_level": 1,
+    "enhancement_max": 10,
+    "sub_stats": []
+  },
+  {
+    "id": "iron_darts",
+    "name": "Phi tiêu sắt",
+    "type": "weapon",
+    "weapon_class": "dart",
+    "rank": "common",
+    "atk": 15,
+    "atk_multiplier": 1.0,
+    "crit_bonus": 3,
+    "attack_speed_bonus": 0.15,
+    "skill_class": "ninja",
+    "buy_price": 200,
+    "sell_price": 80,
+    "craft_recipe": {
+      "iron_ore": 4
+    },
+    "unlock_level": 1,
+    "enhancement_max": 10,
+    "sub_stats": []
   }
 ]

@@ -163,5 +163,148 @@
     "description": "Cá cực hiếm, chỉ xuất hiện ban đêm, cần rất nhiều May Mắn mới câu được.",
     "source": ["fishing"],
     "crafting_tag": ["cooking"]
+  },
+  {
+    "id": "monster_core",
+    "name": "Lõi quái vật",
+    "type": "material",
+    "rarity": "common",
+    "sell_price": 50,
+    "stack_max": 99,
+    "description": "Lõi năng lượng còn sót lại sau khi quái vật bị đánh bại — mọi quái đều có thể rớt.",
+    "source": ["monster_drop"],
+    "crafting_tag": ["alchemy"]
+  },
+  {
+    "id": "rabbit_fur",
+    "name": "Lông thỏ",
+    "type": "material",
+    "rarity": "common",
+    "sell_price": 25,
+    "stack_max": 99,
+    "description": "Lông thỏ mềm, rớt từ Thỏ Hoang ở Đồng Cỏ.",
+    "source": ["monster_drop"],
+    "crafting_tag": ["weaving"]
+  },
+  {
+    "id": "wolf_fur",
+    "name": "Lông sói",
+    "type": "material",
+    "rarity": "common",
+    "sell_price": 80,
+    "stack_max": 99,
+    "description": "Lông sói dày, rớt từ các loài sói.",
+    "source": ["monster_drop"],
+    "crafting_tag": ["weaving"]
+  },
+  {
+    "id": "wolf_meat",
+    "name": "Thịt sói",
+    "type": "material",
+    "rarity": "common",
+    "sell_price": 60,
+    "stack_max": 99,
+    "description": "Thịt sói tươi, rớt từ các loài sói (tỉ lệ 50%, 1-2 miếng).",
+    "source": ["monster_drop"],
+    "crafting_tag": ["cooking"]
+  },
+  {
+    "id": "bear_fur",
+    "name": "Lông gấu",
+    "type": "material",
+    "rarity": "common",
+    "sell_price": 120,
+    "stack_max": 99,
+    "description": "Lông gấu dày dặn, rớt từ Gấu Tre (Rừng Tre).",
+    "source": ["monster_drop"],
+    "crafting_tag": ["weaving"]
+  },
+  {
+    "id": "spider_silk",
+    "name": "Tơ nhện",
+    "type": "material",
+    "rarity": "common",
+    "sell_price": 120,
+    "stack_max": 99,
+    "description": "Tơ nhện dai chắc, rớt từ các loài nhện.",
+    "source": ["monster_drop"],
+    "crafting_tag": ["weaving"]
+  },
+  {
+    "id": "bone_fragment",
+    "name": "Mảnh xương",
+    "type": "material",
+    "rarity": "common",
+    "sell_price": 30,
+    "stack_max": 99,
+    "description": "Mảnh xương còn sót lại, rớt từ Bộ Xương (Hang Động).",
+    "source": ["monster_drop"],
+    "crafting_tag": ["alchemy"]
+  },
+  {
+    "id": "crystal",
+    "name": "Pha lê",
+    "type": "material",
+    "rarity": "rare",
+    "sell_price": 200,
+    "stack_max": 99,
+    "description": "Pha lê lấp lánh tìm thấy trong Hang Động.",
+    "source": ["monster_drop"],
+    "crafting_tag": ["alchemy", "smithing"]
+  },
+  {
+    "id": "silver_ore",
+    "name": "Quặng bạc",
+    "type": "material",
+    "rarity": "rare",
+    "sell_price": 80,
+    "stack_max": 99,
+    "description": "Quặng bạc, tìm thấy ở Hang Động và Núi Tuyết.",
+    "source": ["monster_drop"],
+    "crafting_tag": ["metal", "smithing"]
+  },
+  {
+    "id": "ice_crystal",
+    "name": "Tinh thể băng",
+    "type": "material",
+    "rarity": "rare",
+    "sell_price": 350,
+    "stack_max": 99,
+    "description": "Tinh thể băng vĩnh cửu, rớt từ Tinh Linh Băng (Núi Tuyết).",
+    "source": ["monster_drop"],
+    "crafting_tag": ["alchemy"]
+  },
+  {
+    "id": "ancient_wood",
+    "name": "Gỗ cổ",
+    "type": "material",
+    "rarity": "rare",
+    "sell_price": 150,
+    "stack_max": 99,
+    "description": "Gỗ cổ thụ ngàn năm, tìm thấy ở Rừng Thiêng/Rừng Cổ.",
+    "source": ["monster_drop"],
+    "crafting_tag": ["woodworking"]
+  },
+  {
+    "id": "lantern",
+    "name": "Đèn lồng",
+    "type": "tool",
+    "rarity": "common",
+    "sell_price": 100,
+    "stack_max": 1,
+    "description": "Mở rộng tầm nhìn trong Hang Động (Map 4) — không có thì chỉ thấy 1 vùng nhỏ quanh người chơi.",
+    "source": ["shop"],
+    "crafting_tag": []
+  },
+  {
+    "id": "purify_scroll",
+    "name": "Cuộn Giấy Tẩy Uế",
+    "type": "consumable",
+    "rarity": "common",
+    "sell_price": 150,
+    "stack_max": 99,
+    "description": "Cầm theo khi vào Rừng Thiêng (Map 6) để miễn nhiễm sát thương từ ô đất ô nhiễm.",
+    "source": ["shop"],
+    "crafting_tag": []
   }
 ]

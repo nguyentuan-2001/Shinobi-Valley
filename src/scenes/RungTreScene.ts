@@ -1,41 +1,46 @@
 import Phaser from 'phaser'
 import { Player } from '../entities/Player'
 import { Monster } from '../entities/Monster'
-import { GameData } from '../data/DataLoader'
-import { GRASSLAND_EXIT_ZONES, FARM_EXIT_ZONES, FARM_SCENE_KEY } from '../data/mapTransitions'
+import {
+  BAMBOO_FOREST_EXIT_ZONES,
+  FARM_SCENE_KEY,
+  COMBAT_MAP_WIDTH,
+  COMBAT_MAP_HEIGHT
+} from '../data/mapTransitions'
 import { checkGatedExitZones, fadeOutToScene, fadeInScene } from '../systems/SceneTransition'
 import { placePortalAtZone } from '../systems/PortalVisual'
 import { createCombatPlaceholderTextures, TARGET_RETICLE_TEXTURE } from '../systems/CombatTextures'
 import { syncCombatHudToRegistry } from '../systems/CombatHud'
 import { combatManager } from '../systems/CombatManager'
 import { CombatEngine } from '../systems/CombatEngine'
-import { showLevelGateMessage } from '../systems/CombatMapCommon'
+import {
+  createFlatZoneGroundTexture,
+  spawnMonstersFromDefs,
+  showLevelGateMessage,
+  type MonsterSpawnDef
+} from '../systems/CombatMapCommon'
 import { SkillHotbar, bindSkillHotbarInput } from '../systems/SkillHotbar'
 import { TargetSelector } from '../systems/TargetSelector'
 import type { CharacterPanel } from '../systems/CharacterPanel'
 import type { Skill } from '../data/types'
 import { UIScene } from './UIScene'
 
-const MAP_WIDTH = 1000
-const MAP_HEIGHT = 750
-const GROUND_TEXTURE = 'grassland_bg'
-/** Bản đồ chưa có "làng" (Map 0) thật để respawn theo đúng `docs/gameplay/mechanics.md` ("respawn tại làng") —
- * tạm dùng điểm spawn mặc định của Farm thay thế, xem giải thích đầy đủ ở `docs/planning/progress.md`. */
+const GROUND_TEXTURE = 'bamboo_forest_bg'
 const DEATH_RESPAWN_POINT = { x: 890, y: 430 }
-const DEFAULT_SPAWN = FARM_EXIT_ZONES[1].entryPoint
-/** Sprint 12 — đủ 4 loại quái của Đồng Cỏ theo `docs/world/maps.md` (trước chỉ có Thỏ Hoang). */
-const MONSTER_SPAWNS: Array<{ monsterId: string; x: number; y: number }> = [
-  { monsterId: 'wild_rabbit', x: 400, y: 250 },
-  { monsterId: 'wild_rabbit', x: 700, y: 500 },
-  { monsterId: 'fire_fox', x: 550, y: 350 },
-  { monsterId: 'wild_boar', x: 300, y: 550 },
-  { monsterId: 'grass_wolf', x: 850, y: 300 }
+const DEFAULT_SPAWN = { x: 150, y: 350 }
+/** Sprint 12 — đủ 4 loại quái Rừng Tre theo `docs/world/maps.md`, rải đều 2 nửa map (mô phỏng "2 khu vực nối
+ * tiếp" — xem giải thích ở `systems/CombatMapCommon.ts`). */
+const MONSTER_SPAWNS: MonsterSpawnDef[] = [
+  { monsterId: 'black_wolf', x: 350, y: 250 },
+  { monsterId: 'small_spider', x: 500, y: 500 },
+  { monsterId: 'bamboo_bear', x: 800, y: 300 },
+  { monsterId: 'lynx', x: 1000, y: 480 }
 ]
 
-/** Map 2 — Đồng Cỏ (bản tối giản, KHÔNG phải bản polish đầy đủ với tileset/nhiều khu vực nối tiếp thật — xem
- * giải thích lựa chọn kiến trúc ở `systems/CombatMapCommon.ts`, Sprint 12 áp dụng cho 5 map MỚI nhưng chưa quay
- * lại polish map này vì đã hoạt động ổn từ Sprint 5). */
-export class GrasslandScene extends Phaser.Scene {
+/** Map 3 — Rừng Tre (Lv10+). Bản tối giản theo `systems/CombatMapCommon.ts` (1 scene rộng chia 2 màu nền thay
+ * cho nhiều scene con nối tiếp). Không có cơ chế riêng (chỉ Hang Động/Núi Tuyết/Rừng Thiêng có, theo dev-
+ * schedule.md Sprint 12). */
+export class RungTreScene extends Phaser.Scene {
   private player!: Player
   private monsters: Monster[] = []
   private combatEngine!: CombatEngine
@@ -46,22 +51,26 @@ export class GrasslandScene extends Phaser.Scene {
   private f2Key!: Phaser.Input.Keyboard.Key
 
   constructor() {
-    super({ key: 'GrasslandScene' })
+    super({ key: 'RungTreScene' })
   }
 
   create(data: { spawnX?: number; spawnY?: number }) {
     createCombatPlaceholderTextures(this)
-    this.createGroundTexture()
+    createFlatZoneGroundTexture(this, {
+      key: GROUND_TEXTURE,
+      width: COMBAT_MAP_WIDTH,
+      height: COMBAT_MAP_HEIGHT,
+      zone1Color: 0x4a7a3a,
+      zone2Color: 0x3a6a4a,
+      speckleColor: 'rgba(60,110,50,0.4)'
+    })
     this.add.image(0, 0, GROUND_TEXTURE).setOrigin(0, 0).setDepth(-10000)
 
-    this.physics.world.setBounds(0, 0, MAP_WIDTH, MAP_HEIGHT)
-    this.cameras.main.setBounds(0, 0, MAP_WIDTH, MAP_HEIGHT)
+    this.physics.world.setBounds(0, 0, COMBAT_MAP_WIDTH, COMBAT_MAP_HEIGHT)
+    this.cameras.main.setBounds(0, 0, COMBAT_MAP_WIDTH, COMBAT_MAP_HEIGHT)
 
-    this.monsters = MONSTER_SPAWNS.map((spawn, index) => {
-      const data = GameData.monsters.find((m) => m.id === spawn.monsterId)!
-      return new Monster(this, spawn.x, spawn.y, data, index)
-    })
-    for (const zone of GRASSLAND_EXIT_ZONES) placePortalAtZone(this, zone)
+    this.monsters = spawnMonstersFromDefs(this, MONSTER_SPAWNS)
+    for (const zone of BAMBOO_FOREST_EXIT_ZONES) placePortalAtZone(this, zone)
 
     this.targetReticle = this.add
       .image(0, 0, TARGET_RETICLE_TEXTURE)
@@ -87,7 +96,7 @@ export class GrasslandScene extends Phaser.Scene {
       .text(
         8,
         8,
-        'Map 2 — Đồng Cỏ (thử nghiệm). Space: đòn thường | 1-6: chọn chiêu, Enter: đánh chiêu | F2: đổi mục tiêu | C: bảng nhân vật. Bước vào cổng dịch chuyển để quay lại Farm hoặc đi tiếp sang Rừng Tre.',
+        'Map 3 — Rừng Tre (Lv10+). Space: đòn thường | 1-6: chọn chiêu, Enter: đánh chiêu | F2: đổi mục tiêu | C: bảng nhân vật.',
         {
           fontSize: '12px',
           color: '#ffffff',
@@ -98,10 +107,6 @@ export class GrasslandScene extends Phaser.Scene {
       .setScrollFactor(0)
       .setDepth(2000)
 
-    // Case 13 (combat.md): người chơi chết -> mất 10% Đồng + respawn 50% HP/MP. Chưa có Map 0 (Làng) thật nên
-    // respawn tạm về Farm — xem giải thích ở `DEATH_RESPAWN_POINT`. Đăng ký 1 lần cho scene này (mỗi lần
-    // `create()` chạy lại là 1 listener mới — gỡ listener cũ khi scene shutdown để tránh treo lơ lửng giống bug
-    // đã gặp với `registry.events` ở UIScene, xem progress.md).
     const onPlayerDied = () => this.handlePlayerDeath()
     combatManager.on('player-died', onPlayerDied)
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
@@ -113,7 +118,7 @@ export class GrasslandScene extends Phaser.Scene {
     })
   }
 
-  update(_time: number, _delta: number) {
+  update() {
     this.hotbar.update()
 
     if (!this.isTransitioning && !this.getCharacterPanel()?.isOpen) {
@@ -140,7 +145,7 @@ export class GrasslandScene extends Phaser.Scene {
       const { zone, blockedByLevel } = checkGatedExitZones(
         this.player.x,
         this.player.y,
-        GRASSLAND_EXIT_ZONES,
+        BAMBOO_FOREST_EXIT_ZONES,
         level
       )
       if (zone) {
@@ -159,28 +164,7 @@ export class GrasslandScene extends Phaser.Scene {
     fadeOutToScene(this, FARM_SCENE_KEY, DEATH_RESPAWN_POINT)
   }
 
-  /** Bảng nhân vật sống ở `UIScene`, không phải scene này — xem giải thích ở docstring field `characterPanel`
-   * trong `UIScene.ts` (lý do: thứ tự vẽ giữa scene khác nhau tính theo SCENE, không theo `depth`). */
   private getCharacterPanel(): CharacterPanel | undefined {
     return (this.scene.get('UIScene') as UIScene | null)?.characterPanel
-  }
-
-  private createGroundTexture() {
-    if (this.textures.exists(GROUND_TEXTURE)) return
-    const canvasTexture = this.textures.createCanvas(GROUND_TEXTURE, MAP_WIDTH, MAP_HEIGHT)
-    if (!canvasTexture) return
-    const ctx = canvasTexture.getContext()
-    ctx.fillStyle = '#7CB955'
-    ctx.fillRect(0, 0, MAP_WIDTH, MAP_HEIGHT)
-    // Vài mảng cỏ đậm hơn rải rác cho đỡ phẳng lì, không cần texture tile thật.
-    ctx.fillStyle = 'rgba(90,150,60,0.4)'
-    for (let i = 0; i < 60; i++) {
-      const x = Math.random() * MAP_WIDTH
-      const y = Math.random() * MAP_HEIGHT
-      ctx.beginPath()
-      ctx.ellipse(x, y, 14, 8, 0, 0, Math.PI * 2)
-      ctx.fill()
-    }
-    canvasTexture.refresh()
   }
 }

@@ -11,6 +11,7 @@ import { SkillHotbar, bindSkillHotbarInput } from '../systems/SkillHotbar'
 import { combatManager } from '../systems/CombatManager'
 import { TargetSelector } from '../systems/TargetSelector'
 import type { CharacterPanel } from '../systems/CharacterPanel'
+import type { Skill } from '../data/types'
 import { UIScene } from './UIScene'
 
 const MAP_WIDTH = 700
@@ -60,7 +61,9 @@ export class TrainingGroundScene extends Phaser.Scene {
     const spawnX = data?.spawnX ?? DEFAULT_SPAWN.x
     const spawnY = data?.spawnY ?? DEFAULT_SPAWN.y
     this.player = new Player(this, spawnX, spawnY, 'vegeta')
-    this.player.on('attack', () => this.handlePlayerAttack())
+    this.player.on('attack', (payload: { skill: Skill | null }) =>
+      this.handlePlayerAttack(payload.skill)
+    )
 
     this.cameras.main.startFollow(this.player, true)
     syncCombatHudToRegistry(this)
@@ -111,12 +114,21 @@ export class TrainingGroundScene extends Phaser.Scene {
   }
 
   /** Người Rơm đứng yên, không có tương tác nào khác ngoài bị đánh — không cần check "đánh trúng mục tiêu đã
-   * chết" bằng damage thật vì `TrainingDummy.isAlive()` đã tự chặn (case 4 combat.md). */
-  private handlePlayerAttack() {
-    const hitbox = this.player.getAttackHitboxBounds()
-    for (const dummy of this.dummies) {
-      if (dummy.isAlive() && Phaser.Geom.Rectangle.Overlaps(hitbox, dummy.getBounds())) {
-        dummy.takeHit()
+   * chết" bằng damage thật vì `TrainingDummy.isAlive()` đã tự chặn (case 4 combat.md). Sprint 11: hitbox theo
+   * đúng `range`/`aoe` của chiêu (nếu có) + lặp đúng `hits` lần (case 2 combat.md) — Người Rơm không có DEF/HP
+   * thật/không nhận hiệu ứng trạng thái (case 15 mechanics.md: chỉ đếm SỐ LẦN trúng, khác hẳn quái/player) nên
+   * không cần bất kỳ phần tính damage/passive/effect nào của `GrasslandScene`, chỉ cần đếm đủ số hit. */
+  private handlePlayerAttack(skill: Skill | null) {
+    if (skill?.type === 'buff') return // buff tự thân không gây hit gì lên Người Rơm
+    const hitbox = skill
+      ? this.player.getSkillHitboxBounds(skill)
+      : this.player.getAttackHitboxBounds()
+    const hits = skill ? Math.max(1, skill.hits) : 1
+    for (let hit = 0; hit < hits; hit++) {
+      for (const dummy of this.dummies) {
+        if (dummy.isAlive() && Phaser.Geom.Rectangle.Overlaps(hitbox, dummy.getBounds())) {
+          dummy.takeHit()
+        }
       }
     }
   }

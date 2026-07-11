@@ -1,41 +1,49 @@
 import Phaser from 'phaser'
 import { Player } from '../entities/Player'
 import { Monster } from '../entities/Monster'
-import { GameData } from '../data/DataLoader'
-import { GRASSLAND_EXIT_ZONES, FARM_EXIT_ZONES, FARM_SCENE_KEY } from '../data/mapTransitions'
+import {
+  SACRED_FOREST_EXIT_ZONES,
+  FARM_SCENE_KEY,
+  COMBAT_MAP_WIDTH,
+  COMBAT_MAP_HEIGHT
+} from '../data/mapTransitions'
 import { checkGatedExitZones, fadeOutToScene, fadeInScene } from '../systems/SceneTransition'
 import { placePortalAtZone } from '../systems/PortalVisual'
 import { createCombatPlaceholderTextures, TARGET_RETICLE_TEXTURE } from '../systems/CombatTextures'
 import { syncCombatHudToRegistry } from '../systems/CombatHud'
 import { combatManager } from '../systems/CombatManager'
+import { inventoryManager } from '../systems/InventoryManager'
 import { CombatEngine } from '../systems/CombatEngine'
-import { showLevelGateMessage } from '../systems/CombatMapCommon'
+import {
+  createFlatZoneGroundTexture,
+  spawnMonstersFromDefs,
+  showLevelGateMessage,
+  type MonsterSpawnDef
+} from '../systems/CombatMapCommon'
 import { SkillHotbar, bindSkillHotbarInput } from '../systems/SkillHotbar'
 import { TargetSelector } from '../systems/TargetSelector'
 import type { CharacterPanel } from '../systems/CharacterPanel'
 import type { Skill } from '../data/types'
 import { UIScene } from './UIScene'
 
-const MAP_WIDTH = 1000
-const MAP_HEIGHT = 750
-const GROUND_TEXTURE = 'grassland_bg'
-/** Bản đồ chưa có "làng" (Map 0) thật để respawn theo đúng `docs/gameplay/mechanics.md` ("respawn tại làng") —
- * tạm dùng điểm spawn mặc định của Farm thay thế, xem giải thích đầy đủ ở `docs/planning/progress.md`. */
+const GROUND_TEXTURE = 'sacred_forest_bg'
 const DEATH_RESPAWN_POINT = { x: 890, y: 430 }
-const DEFAULT_SPAWN = FARM_EXIT_ZONES[1].entryPoint
-/** Sprint 12 — đủ 4 loại quái của Đồng Cỏ theo `docs/world/maps.md` (trước chỉ có Thỏ Hoang). */
-const MONSTER_SPAWNS: Array<{ monsterId: string; x: number; y: number }> = [
-  { monsterId: 'wild_rabbit', x: 400, y: 250 },
-  { monsterId: 'wild_rabbit', x: 700, y: 500 },
-  { monsterId: 'fire_fox', x: 550, y: 350 },
-  { monsterId: 'wild_boar', x: 300, y: 550 },
-  { monsterId: 'grass_wolf', x: 850, y: 300 }
+const DEFAULT_SPAWN = { x: 150, y: 350 }
+const MONSTER_SPAWNS: MonsterSpawnDef[] = [
+  { monsterId: 'spirit_fox', x: 350, y: 250 },
+  { monsterId: 'night_moth_ghost', x: 500, y: 500 },
+  { monsterId: 'corrupted_beast', x: 800, y: 300 },
+  { monsterId: 'monster_tree', x: 1000, y: 480 }
 ]
+/** "Khu vực ô nhiễm — một số ô đất gây 1 HP/giây thiệt hại trừ khi có Cuộn Giấy Tẩy Uế" — `docs/world/maps.md`
+ * mục Map 6. Đơn giản hoá: dùng luôn NỬA PHẢI của map (`zone2`, đã có màu nền khác biệt qua
+ * `createFlatZoneGroundTexture()`) làm "khu ô nhiễm" thay vì định nghĩa thêm 1 vùng hình học riêng — vừa khớp
+ * trực quan (nửa phải đổi màu tím/xanh bệnh) vừa tái dùng đúng ranh giới 2 khu đã có sẵn. */
+const CORRUPTION_ZONE_X = COMBAT_MAP_WIDTH / 2
+const CORRUPTION_TICK_MS = 1000
+const CORRUPTION_DAMAGE_PER_TICK = 1
 
-/** Map 2 — Đồng Cỏ (bản tối giản, KHÔNG phải bản polish đầy đủ với tileset/nhiều khu vực nối tiếp thật — xem
- * giải thích lựa chọn kiến trúc ở `systems/CombatMapCommon.ts`, Sprint 12 áp dụng cho 5 map MỚI nhưng chưa quay
- * lại polish map này vì đã hoạt động ổn từ Sprint 5). */
-export class GrasslandScene extends Phaser.Scene {
+export class RungThiengScene extends Phaser.Scene {
   private player!: Player
   private monsters: Monster[] = []
   private combatEngine!: CombatEngine
@@ -44,24 +52,30 @@ export class GrasslandScene extends Phaser.Scene {
   private readonly targetSelector = new TargetSelector<Monster>()
   private targetReticle!: Phaser.GameObjects.Image
   private f2Key!: Phaser.Input.Keyboard.Key
+  private lastCorruptionTickAt = -Infinity
+  private corruptionWarningText?: Phaser.GameObjects.Text
 
   constructor() {
-    super({ key: 'GrasslandScene' })
+    super({ key: 'RungThiengScene' })
   }
 
   create(data: { spawnX?: number; spawnY?: number }) {
     createCombatPlaceholderTextures(this)
-    this.createGroundTexture()
+    createFlatZoneGroundTexture(this, {
+      key: GROUND_TEXTURE,
+      width: COMBAT_MAP_WIDTH,
+      height: COMBAT_MAP_HEIGHT,
+      zone1Color: 0x2f4a2a,
+      zone2Color: 0x4a2f5a,
+      speckleColor: 'rgba(90,40,110,0.5)'
+    })
     this.add.image(0, 0, GROUND_TEXTURE).setOrigin(0, 0).setDepth(-10000)
 
-    this.physics.world.setBounds(0, 0, MAP_WIDTH, MAP_HEIGHT)
-    this.cameras.main.setBounds(0, 0, MAP_WIDTH, MAP_HEIGHT)
+    this.physics.world.setBounds(0, 0, COMBAT_MAP_WIDTH, COMBAT_MAP_HEIGHT)
+    this.cameras.main.setBounds(0, 0, COMBAT_MAP_WIDTH, COMBAT_MAP_HEIGHT)
 
-    this.monsters = MONSTER_SPAWNS.map((spawn, index) => {
-      const data = GameData.monsters.find((m) => m.id === spawn.monsterId)!
-      return new Monster(this, spawn.x, spawn.y, data, index)
-    })
-    for (const zone of GRASSLAND_EXIT_ZONES) placePortalAtZone(this, zone)
+    this.monsters = spawnMonstersFromDefs(this, MONSTER_SPAWNS)
+    for (const zone of SACRED_FOREST_EXIT_ZONES) placePortalAtZone(this, zone)
 
     this.targetReticle = this.add
       .image(0, 0, TARGET_RETICLE_TEXTURE)
@@ -87,7 +101,7 @@ export class GrasslandScene extends Phaser.Scene {
       .text(
         8,
         8,
-        'Map 2 — Đồng Cỏ (thử nghiệm). Space: đòn thường | 1-6: chọn chiêu, Enter: đánh chiêu | F2: đổi mục tiêu | C: bảng nhân vật. Bước vào cổng dịch chuyển để quay lại Farm hoặc đi tiếp sang Rừng Tre.',
+        'Map 6 — Rừng Thiêng (Lv40+). Nửa phải bị ô nhiễm (-1 HP/s) — cần Cuộn Giấy Tẩy Uế (item "purify_scroll") để miễn nhiễm. Space: đòn thường | 1-6: chọn chiêu, Enter: đánh chiêu | F2: đổi mục tiêu | C: bảng nhân vật.',
         {
           fontSize: '12px',
           color: '#ffffff',
@@ -98,10 +112,6 @@ export class GrasslandScene extends Phaser.Scene {
       .setScrollFactor(0)
       .setDepth(2000)
 
-    // Case 13 (combat.md): người chơi chết -> mất 10% Đồng + respawn 50% HP/MP. Chưa có Map 0 (Làng) thật nên
-    // respawn tạm về Farm — xem giải thích ở `DEATH_RESPAWN_POINT`. Đăng ký 1 lần cho scene này (mỗi lần
-    // `create()` chạy lại là 1 listener mới — gỡ listener cũ khi scene shutdown để tránh treo lơ lửng giống bug
-    // đã gặp với `registry.events` ở UIScene, xem progress.md).
     const onPlayerDied = () => this.handlePlayerDeath()
     combatManager.on('player-died', onPlayerDied)
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
@@ -113,7 +123,7 @@ export class GrasslandScene extends Phaser.Scene {
     })
   }
 
-  update(_time: number, _delta: number) {
+  update() {
     this.hotbar.update()
 
     if (!this.isTransitioning && !this.getCharacterPanel()?.isOpen) {
@@ -125,6 +135,7 @@ export class GrasslandScene extends Phaser.Scene {
           this.time.now,
           this.combatEngine.hasCombatStarted()
         )
+      this.updateCorruption()
     }
 
     if (Phaser.Input.Keyboard.JustDown(this.f2Key)) this.targetSelector.cycleNext(this.monsters)
@@ -140,7 +151,7 @@ export class GrasslandScene extends Phaser.Scene {
       const { zone, blockedByLevel } = checkGatedExitZones(
         this.player.x,
         this.player.y,
-        GRASSLAND_EXIT_ZONES,
+        SACRED_FOREST_EXIT_ZONES,
         level
       )
       if (zone) {
@@ -152,6 +163,51 @@ export class GrasslandScene extends Phaser.Scene {
     }
   }
 
+  /** Case đo được ở "Done when" Sprint 12: đứng trong khu ô nhiễm (nửa phải) mà KHÔNG có Cuộn Giấy Tẩy Uế thì
+   * trừ đúng `CORRUPTION_DAMAGE_PER_TICK` HP mỗi `CORRUPTION_TICK_MS` — dùng mốc thời gian riêng (giống
+   * `Monster.CONTACT_DAMAGE_COOLDOWN_MS`), không tick khi vừa rời khu (không cộng dồn "nợ" thời gian đứng
+   * ngoài). Không tiêu hao Cuộn Giấy Tẩy Uế (miễn nhiễm khi CÓ SẴN trong túi, không phải dùng 1 lần). */
+  private updateCorruption(): void {
+    const inCorruptionZone = this.player.x >= CORRUPTION_ZONE_X
+    if (!inCorruptionZone) {
+      this.corruptionWarningText?.destroy()
+      this.corruptionWarningText = undefined
+      this.lastCorruptionTickAt = -Infinity
+      return
+    }
+
+    const hasPurifyScroll = inventoryManager
+      .getSlots()
+      .some((s) => s.itemId === 'purify_scroll' && s.quantity > 0)
+
+    if (!this.corruptionWarningText) {
+      this.corruptionWarningText = this.add
+        .text(
+          this.player.x,
+          this.player.y - 30,
+          hasPurifyScroll ? 'Được Tẩy Uế bảo vệ' : 'Ô nhiễm! (-1 HP/s)',
+          {
+            fontSize: '10px',
+            color: hasPurifyScroll ? '#b4ffcc' : '#ffb4b4',
+            fontFamily: 'monospace',
+            backgroundColor: '#00000088',
+            padding: { x: 3, y: 1 }
+          }
+        )
+        .setOrigin(0.5)
+        .setDepth(999_999)
+    } else {
+      this.corruptionWarningText.setPosition(this.player.x, this.player.y - 30)
+    }
+
+    if (hasPurifyScroll) return
+
+    const now = this.time.now
+    if (now - this.lastCorruptionTickAt < CORRUPTION_TICK_MS) return
+    this.lastCorruptionTickAt = now
+    combatManager.takeDamage(CORRUPTION_DAMAGE_PER_TICK, now)
+  }
+
   private handlePlayerDeath() {
     if (this.isTransitioning) return
     this.isTransitioning = true
@@ -159,28 +215,7 @@ export class GrasslandScene extends Phaser.Scene {
     fadeOutToScene(this, FARM_SCENE_KEY, DEATH_RESPAWN_POINT)
   }
 
-  /** Bảng nhân vật sống ở `UIScene`, không phải scene này — xem giải thích ở docstring field `characterPanel`
-   * trong `UIScene.ts` (lý do: thứ tự vẽ giữa scene khác nhau tính theo SCENE, không theo `depth`). */
   private getCharacterPanel(): CharacterPanel | undefined {
     return (this.scene.get('UIScene') as UIScene | null)?.characterPanel
-  }
-
-  private createGroundTexture() {
-    if (this.textures.exists(GROUND_TEXTURE)) return
-    const canvasTexture = this.textures.createCanvas(GROUND_TEXTURE, MAP_WIDTH, MAP_HEIGHT)
-    if (!canvasTexture) return
-    const ctx = canvasTexture.getContext()
-    ctx.fillStyle = '#7CB955'
-    ctx.fillRect(0, 0, MAP_WIDTH, MAP_HEIGHT)
-    // Vài mảng cỏ đậm hơn rải rác cho đỡ phẳng lì, không cần texture tile thật.
-    ctx.fillStyle = 'rgba(90,150,60,0.4)'
-    for (let i = 0; i < 60; i++) {
-      const x = Math.random() * MAP_WIDTH
-      const y = Math.random() * MAP_HEIGHT
-      ctx.beginPath()
-      ctx.ellipse(x, y, 14, 8, 0, 0, Math.PI * 2)
-      ctx.fill()
-    }
-    canvasTexture.refresh()
   }
 }
