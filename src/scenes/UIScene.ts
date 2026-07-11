@@ -45,6 +45,14 @@ export class UIScene extends Phaser.Scene {
       color: '#ffff88',
       fontFamily: 'monospace'
     })
+    // Sprint 10 — `playerGold` đã được `CombatHud.ts` ghi vào registry từ Sprint 5 nhưng CHƯA từng có nơi nào
+    // hiển thị (rà lại lúc làm shop NPC mới phát hiện) — thêm dòng hiện luôn ở đây, cần thiết để người chơi biết
+    // còn bao nhiêu tiền khi đứng trước shop.
+    const goldText = this.add.text(8, 68, '', {
+      fontSize: '14px',
+      color: '#ffd76a',
+      fontFamily: 'monospace'
+    })
 
     const updateCombatHud = () => {
       hpText.setText(
@@ -56,6 +64,7 @@ export class UIScene extends Phaser.Scene {
       levelText.setText(
         `Lv. ${this.registry.get('playerLevel') ?? 1} | EXP: ${this.registry.get('playerExp') ?? 0} / ${this.registry.get('playerExpToNext') ?? 100}`
       )
+      goldText.setText(`Đồng: ${this.registry.get('playerGold') ?? 0}đ`)
     }
     updateCombatHud()
     const combatHudKeys = [
@@ -65,7 +74,8 @@ export class UIScene extends Phaser.Scene {
       'playerMaxMp',
       'playerLevel',
       'playerExp',
-      'playerExpToNext'
+      'playerExpToNext',
+      'playerGold'
     ]
     const onCombatStatChange = () => updateCombatHud()
     for (const key of combatHudKeys)
@@ -73,7 +83,7 @@ export class UIScene extends Phaser.Scene {
 
     // Hạt giống đang chọn (Sprint 2, thay tạm cho hotbar/inventory thật ở Sprint 4) — GameScene ghi tên qua
     // `this.registry` (DataManager toàn cục dùng chung mọi scene), ở đây chỉ đọc + tự cập nhật khi đổi.
-    const seedText = this.add.text(8, 72, '', {
+    const seedText = this.add.text(8, 88, '', {
       fontSize: '14px',
       color: '#c8ffb0',
       fontFamily: 'monospace'

@@ -4,10 +4,17 @@ import { PreloadScene } from './scenes/PreloadScene'
 import { GameScene } from './scenes/GameScene'
 import { TrainingGroundScene } from './scenes/TrainingGroundScene'
 import { GrasslandScene } from './scenes/GrasslandScene'
+import { RungTreScene } from './scenes/RungTreScene'
+import { HangDongScene } from './scenes/HangDongScene'
+import { NuiTuyetScene } from './scenes/NuiTuyetScene'
+import { RungThiengScene } from './scenes/RungThiengScene'
+import { RungCoScene } from './scenes/RungCoScene'
+import { VillageScene } from './scenes/VillageScene'
 import { EditorScene } from './scenes/EditorScene'
 import { UIScene } from './scenes/UIScene'
 import { combatManager } from './systems/CombatManager'
 import { inventoryManager } from './systems/InventoryManager'
+import { npcRelationshipManager } from './systems/NpcRelationshipManager'
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -37,6 +44,12 @@ const config: Phaser.Types.Core.GameConfig = {
     GameScene,
     TrainingGroundScene,
     GrasslandScene,
+    RungTreScene,
+    HangDongScene,
+    NuiTuyetScene,
+    RungThiengScene,
+    RungCoScene,
+    VillageScene,
     UIScene,
     EditorScene
   ]
@@ -63,4 +76,8 @@ if (import.meta.env.DEV) {
       __inventoryManager: typeof inventoryManager
     }
   ).__inventoryManager = inventoryManager
+  // Sprint 10 — NPC/quan hệ, cùng lý do expose như 2 singleton trên.
+  ;(
+    window as unknown as { __npcRelationshipManager: typeof npcRelationshipManager }
+  ).__npcRelationshipManager = npcRelationshipManager
 }

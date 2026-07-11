@@ -23,6 +23,7 @@ import { ANIMAL_PEN_SLOTS } from '../data/animalPens'
 import { AnimalManager, type AnimalRuntime } from '../systems/AnimalManager'
 import { FISHING_SPOT } from '../data/fishingSpot'
 import { pickEligibleFish, rollCatchTimeMs } from '../systems/Fishing'
+import { npcRelationshipManager } from '../systems/NpcRelationshipManager'
 import { hasSaveGame, loadGame, saveGame } from '../systems/SaveManager'
 import type { SaveState, Fish } from '../data/types'
 import { UIScene } from './UIScene'
@@ -360,6 +361,7 @@ export class GameScene extends Phaser.Scene {
         this.animalManager.loadState(savedGame.animals)
         combatManager.loadStats(savedGame.player_stats)
         inventoryManager.loadSlots(savedGame.inventory)
+        npcRelationshipManager.loadState(savedGame.npc_relationships)
         this.lastKnownPosition = { x: savedGame.player_position.x, y: savedGame.player_position.y }
       }
     }
@@ -615,7 +617,8 @@ export class GameScene extends Phaser.Scene {
       player_stats: { ...combatManager.getStats() },
       inventory: inventoryManager.serialize(),
       game_time: this.timeManager.serialize(),
-      player_position: { scene: 'GameScene', ...this.lastKnownPosition }
+      player_position: { scene: 'GameScene', ...this.lastKnownPosition },
+      npc_relationships: npcRelationshipManager.serialize()
     }
   }
 

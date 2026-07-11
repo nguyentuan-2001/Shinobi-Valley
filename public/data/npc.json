@@ -1,11 +1,101 @@
 [
   {
+    "id": "village_chief",
+    "name": "Lão Làng Trần",
+    "location": "village",
+    "shop_type": null,
+    "quest_giver": true,
+    "dialogue_default": "Ngôi làng này đã đứng vững qua bao thế hệ... con là hy vọng cuối cùng của chúng ta.",
+    "unlock_level": 1,
+    "relationship_max": 10
+  },
+  {
     "id": "seed_seller",
-    "name": "Người bán hạt giống",
+    "name": "Cô Nông Lan",
     "location": "village",
     "shop_type": "seed",
-    "quest_giver": false,
+    "quest_giver": true,
     "dialogue_default": "Hôm nay bạn muốn trồng gì?",
+    "unlock_level": 1,
+    "relationship_max": 10
+  },
+  {
+    "id": "blacksmith",
+    "name": "Thợ Rèn Kim",
+    "location": "village",
+    "shop_type": "weapon",
+    "quest_giver": true,
+    "dialogue_default": "Vũ khí tốt cứu mạng con trong rừng sâu đấy.",
+    "unlock_level": 1,
+    "relationship_max": 10
+  },
+  {
+    "id": "alchemist",
+    "name": "Nhà Giả Kim Bí Ẩn",
+    "location": "village",
+    "shop_type": null,
+    "quest_giver": true,
+    "dialogue_default": "Ta có vài thứ... thú vị lắm, nhưng chưa phải lúc.",
+    "unlock_level": 1,
+    "relationship_max": 10
+  },
+  {
+    "id": "dojo_master",
+    "name": "Thầy Dạy Võ",
+    "location": "village",
+    "shop_type": null,
+    "quest_giver": true,
+    "dialogue_default": "Sức mạnh thật sự đến từ luyện tập, không phải may mắn.",
+    "unlock_level": 1,
+    "relationship_max": 10
+  },
+  {
+    "id": "fisherman",
+    "name": "Lão Ngư",
+    "location": "village",
+    "shop_type": null,
+    "quest_giver": false,
+    "dialogue_default": "Con sông kia giấu nhiều bí mật hơn con nghĩ đấy.",
+    "unlock_level": 1,
+    "relationship_max": 10
+  },
+  {
+    "id": "merchant",
+    "name": "Người Thu Mua",
+    "location": "village",
+    "shop_type": "sell_all",
+    "quest_giver": false,
+    "dialogue_default": "Có gì bán không? Ta trả giá công bằng.",
+    "unlock_level": 1,
+    "relationship_max": 10
+  },
+  {
+    "id": "scholar",
+    "name": "Nhà Nghiên Cứu",
+    "location": "village",
+    "shop_type": null,
+    "quest_giver": false,
+    "dialogue_default": "Tri thức cổ xưa vẫn còn ngủ yên trong thư viện này.",
+    "unlock_level": 1,
+    "relationship_max": 10
+  },
+  {
+    "id": "general_shop",
+    "name": "Chủ Cửa Hàng",
+    "location": "village",
+    "shop_type": null,
+    "quest_giver": false,
+    "dialogue_default": "Ghé qua xem có gì cần không!",
+    "unlock_level": 1,
+    "relationship_max": 10
+  },
+  {
+    "id": "gacha_keeper",
+    "name": "Cô Gái Gacha",
+    "location": "village",
+    "shop_type": null,
+    "quest_giver": false,
+    "dialogue_default": "Muốn thử vận may hôm nay không?",
     "unlock_level": 1,
     "relationship_max": 10
   }

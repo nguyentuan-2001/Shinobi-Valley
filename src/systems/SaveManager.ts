@@ -42,7 +42,8 @@ export function createDefaultSaveState(): SaveState {
     },
     inventory: [],
     game_time: { day: 1, hour: 6 },
-    player_position: { scene: 'GameScene', x: DEFAULT_SPAWN.x, y: DEFAULT_SPAWN.y }
+    player_position: { scene: 'GameScene', x: DEFAULT_SPAWN.x, y: DEFAULT_SPAWN.y },
+    npc_relationships: []
   }
 }
 
