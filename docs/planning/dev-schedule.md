@@ -103,7 +103,7 @@ _(Roadmap: Movement, Inventory, Combat, Planting, Harvest, Save)_
 | Loại  | Việc cần làm                                                                                                                                                                            |
 | ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Code  | Hệ thống chuyển màn đầu tiên (Exit Zone/Entry Point/fade, xem `mechanics.md`) — áp dụng Farm ↔ Bãi Tập Luyện trước, generic để dùng lại cho Village/Map 2-7 sau |
-| Code  | `TrainingDummy` entity (đọc vị trí từ `src/data/trainingDummyPlacement.ts`) — đếm hit riêng (không dùng công thức damage), chết ở đúng 5 hit, respawn 15s, không EXP/gold/drop |
+| Code  | `TrainingDummy` entity (đọc vị trí từ `src/data/trainingDummyPlacement.ts`) — đếm hit riêng (không dùng công thức damage), chết ở đúng 5 hit, respawn 10s, không EXP/gold/drop |
 | Code  | `Weapon` component (đang cầm), đòn đánh thường (hitbox melee, cooldown ngắn)                                                                                                            |
 | Code  | `Monster` entity base (HP/ATK/DEF, di chuyển AI đơn giản — patrol/chase), công thức damage `ATK × multiplier × 100/(100+DEF)`, crit ×1.5, dmg tối thiểu 1                               |
 | Code  | Chết/respawn: quái chết→despawn+drop, player chết→mất 10% Đồng rơi ra (despawn 5 phút), respawn 50% HP/MP tại làng                                                                      |
@@ -111,7 +111,7 @@ _(Roadmap: Movement, Inventory, Combat, Planting, Harvest, Save)_
 | Data  | `src/data/trainingDummyPlacement.ts` (5 vị trí Người Rơm), `weapons.json` (1 vũ khí: Kiếm sắt), `monsters.json` (1-2 quái Đồng Cỏ: Thỏ hoang...), `skills.json` (skill 1: Chém nhanh) |
 | Asset | Sprite Người Rơm (32×32, có hiệu ứng vỡ khi chết), animation đánh cho player (thêm state `attack` vào sprite sheet), sprite 1-2 quái (32×32, theo `art-refs/enemies/monsters.md`), hiệu ứng chém cơ bản (theo `art-refs/combat/skills.md`) |
 
-**Done when:** Đi từ Farm sang Bãi Tập Luyện và ngược lại qua Exit Zone; đánh Người Rơm đúng 5 hit thì chết bất kể ATK cao/thấp, sau 15s tự hồi sinh đúng vị trí; đánh chết quái thật ở Đồng Cỏ nhận EXP/gold/drop đúng bảng; player chết thì respawn đúng vị trí/HP, rơi đúng % Đồng.
+**Done when:** Đi từ Farm sang Bãi Tập Luyện và ngược lại qua Exit Zone; đánh Người Rơm đúng 5 hit thì chết bất kể ATK cao/thấp, sau 10s tự hồi sinh đúng vị trí; đánh chết quái thật ở Đồng Cỏ nhận EXP/gold/drop đúng bảng; player chết thì respawn đúng vị trí/HP, rơi đúng % Đồng.
 
 ### Sprint 6: Save/Load hoàn chỉnh — chốt Alpha
 
@@ -397,9 +397,9 @@ public/assets/
 - [x] Sprint 7 — Đủ 14 cây + phân bón
 - [x] Sprint 8 — Chăn nuôi
 - [x] Sprint 9 — Câu cá
-- [ ] Sprint 10 — NPC, dialogue, relationship, shop
-- [ ] Sprint 11 — 4 hệ vũ khí còn lại + skill/status
-- [ ] Sprint 12 — Map 2-5 + cơ chế riêng
+- [x] Sprint 10 — NPC, dialogue, relationship, shop
+- [x] Sprint 11 — 4 hệ vũ khí còn lại + skill/status
+- [x] Sprint 12 — Map 2-5 + cơ chế riêng
 - [ ] Sprint 13 — 5 Mini-boss
 - [ ] Sprint 14 — Crafting + cường hóa
 - [ ] Sprint 15 — Professions

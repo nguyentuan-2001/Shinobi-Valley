@@ -204,10 +204,10 @@ Danh sách đầy đủ các trường hợp cần xử lý đúng trước khi 
 
 ### Chết & hồi sinh
 
-12. **Quái thường chết**: despawn, cộng EXP/gold theo bảng, roll loot table, hồi sinh lại sau 5 phút vào lại khu vực/30 phút thực (theo `mechanics.md` mục "Cơ chế Kẻ Địch").
+12. **Quái thường chết**: despawn, cộng EXP/gold theo bảng, roll loot table, hồi sinh lại sau **10 giây thực** kể từ lúc chết (theo `mechanics.md` mục "Cơ chế Kẻ Địch" — đổi từ mốc "5 phút/30 phút thực" ban đầu theo yêu cầu thực tế lúc chơi thử).
 13. **Người chơi chết**: mất 10% Đồng đang cầm (rơi ra ngoài, despawn sau 5 phút nếu không nhặt lại), respawn 50% HP/MP tại làng (Map 0).
 14. **Boss chết**: không hồi sinh (trừ boss sự kiện theo lịch) — khác hẳn quái thường.
-15. **Người Rơm (Training Dummy) chết** — hoàn toàn khác 3 case trên, xem đầy đủ ở `docs/gameplay/mechanics.md` mục "Người Rơm (Training Dummy)": không dùng công thức damage, chỉ đếm đủ **5 lần trúng** (mỗi hit tính riêng theo case 2/3) → despawn, không EXP/gold/drop, không tính kill-count quest, hồi sinh sau đúng **15 giây thực** tại đúng vị trí ban đầu (không phải 5 phút/30 phút như quái thường). Đã chết thì không có hitbox tới lúc hồi sinh xong (case 4 áp dụng).
+15. **Người Rơm (Training Dummy) chết** — hoàn toàn khác 3 case trên, xem đầy đủ ở `docs/gameplay/mechanics.md` mục "Người Rơm (Training Dummy)": không dùng công thức damage, chỉ đếm đủ **5 lần trúng** (mỗi hit tính riêng theo case 2/3) → despawn, không EXP/gold/drop, không tính kill-count quest, hồi sinh sau đúng **10 giây thực** tại đúng vị trí ban đầu (cùng nhịp với quái thường). Đã chết thì không có hitbox tới lúc hồi sinh xong (case 4 áp dụng).
 
 ### Va chạm bản đồ
 

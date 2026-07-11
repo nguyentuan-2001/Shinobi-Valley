@@ -197,9 +197,10 @@ Một số ô đất trong Rừng Thiêng bị nhiễm Ma Khí nặng — bướ
 
 ## Cơ chế Kẻ Địch
 
-- **Tầm phát hiện:** 5–8 ô tùy loại kẻ địch (kẻ địch tầm xa phát hiện ở 8 ô, tầm gần ở 5 ô)
+- **Hoà bình cho tới khi bị khiêu khích** (đổi theo yêu cầu thực tế lúc chơi thử): TOÀN BỘ kẻ địch trong 1 map chỉ đứng patrol bình thường, không phát hiện/đuổi theo/gây sát thương gì cả — kể cả đứng ngay cạnh — cho tới khi người chơi CHỦ ĐỘNG đánh trúng ít nhất 1 kẻ địch trong map đó. Đánh trúng 1 con thì MỌI kẻ địch trong map (không chỉ con vừa bị đánh) chuyển sang chế độ hiếu chiến bình thường theo 2 mục dưới, giữ nguyên tới khi rời map (vào lại map thì hoà bình trở lại).
+- **Tầm phát hiện:** 5–8 ô tùy loại kẻ địch (kẻ địch tầm xa phát hiện ở 8 ô, tầm gần ở 5 ô) — chỉ tính SAU KHI đã bị khiêu khích theo mục trên.
 - **Aggro:** khi vào tầm phát hiện, đuổi theo người chơi cho đến khi cách xa 12 ô hoặc kẻ địch chết
-- **Hồi sinh kẻ địch:** toàn bộ kẻ địch trong khu vực hồi sinh **5 phút sau khi vào lại khu vực** (hoặc sau 30 phút thực)
+- **Hồi sinh kẻ địch:** mỗi kẻ địch tự hồi sinh **10 giây thực sau khi chết** (đổi từ mốc "5 phút/30 phút thực" ban đầu theo yêu cầu thực tế lúc chơi thử — cùng nhịp hồi sinh với Người Rơm ở Bãi Tập Luyện)
 - **Cấp độ cố định:** kẻ địch có cấp cố định theo khu vực, không tự điều chỉnh theo cấp người chơi
 - **Trùm (Boss):** không hồi sinh sau khi chết, ngoại trừ trùm sự kiện theo lịch
 
@@ -209,9 +210,9 @@ Một số ô đất trong Rừng Thiêng bị nhiễm Ma Khí nặng — bướ
 
 - **Không phát hiện/aggro** — đứng yên tuyệt đối, không bao giờ tự tấn công người chơi, không có tầm phát hiện.
 - **Không dùng công thức damage** (`ATK × multiplier × 100/(100+DEF)`) — chỉ **đếm số lần bị trúng đòn** (mỗi `hit` tính riêng theo `skills.json.hits`, không tính theo số lần bấm chiêu). Đủ **5 lần trúng** → "chết" (despawn + hiệu ứng rơm vỡ tung), bất kể ATK người chơi cao hay thấp.
-- **Hồi sinh sau đúng 15 giây thực** (không phải 5 phút như kẻ địch thường) — respawn lại đúng vị trí ban đầu, reset về 0 lần trúng.
+- **Hồi sinh sau đúng 10 giây thực** (cùng nhịp với kẻ địch thường) — respawn lại đúng vị trí ban đầu, reset về 0 lần trúng.
 - **Không rớt EXP/gold/drop**, không tính vào bất kỳ kill-count của quest/achievement nào.
-- Đã chết (đang trong 15s chờ respawn) thì không có hitbox — chiêu AOE/piercing lan tới vị trí cũ không tính gì.
+- Đã chết (đang trong 10s chờ respawn) thì không có hitbox — chiêu AOE/piercing lan tới vị trí cũ không tính gì.
 - 1 chiêu trúng nhiều Người Rơm cùng lúc (AOE) → mỗi Người Rơm đếm độc lập, không dùng chung 1 bộ đếm.
 
 ---
