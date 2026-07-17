@@ -54,17 +54,17 @@ Nguồn: `art-refs/characters/npcs.md`
 | id | NPC |
 |---|---|
 | `village_chief` | Trưởng Làng |
-| `seed_merchant` | Người Bán Hạt Giống |
-| `shopkeeper` | Chủ Cửa Hàng |
+| `seed_seller` | Người Bán Hạt Giống |
+| `general_shop` | Chủ Cửa Hàng |
 | `blacksmith` | Thợ Rèn |
 | `alchemist` | Nhà Giả Kim |
 | `fisherman` | Người Câu Cá |
-| `item_buyer` | Người Thu Mua |
-| `martial_arts_teacher` | Giáo Viên Võ Thuật |
-| `researcher` | Nhà Nghiên Cứu |
+| `merchant` | Người Thu Mua |
+| `dojo_master` | Giáo Viên Võ Thuật |
+| `scholar` | Nhà Nghiên Cứu |
 | `gacha_keeper` | Cô Gái Gacha |
 
-File: `<id>.png`. Khớp field `id` trong `npc.json` (data-schema.md).
+File: `<id>.png`. Khớp field `id` trong `public/data/npc.json` thật (5 id trước đây ghi theo tên đoán từ `data-schema.md` — lệch với id thật đã dùng lúc code Sprint 10: `seed_merchant`→`seed_seller`, `shopkeeper`→`general_shop`, `item_buyer`→`merchant`, `martial_arts_teacher`→`dojo_master`, `researcher`→`scholar`).
 
 **NPC cốt truyện** (không có shop/quest cố định, không nằm trong `npc.json`): `linh` (Thiếu Nữ Rừng) — xem `art-refs/characters/npcs.md` mục "NPC Cốt Truyện". Hoàng (bị Ma Khí kiểm soát) KHÔNG phải NPC, xem mục 6 (Quái vật & Boss).
 
