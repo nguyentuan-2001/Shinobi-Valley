@@ -65,7 +65,10 @@
       "Bash(node \"C:\\\\Users\\\\kent\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--Game-shinobi-valley\\\\1296a1a0-24bd-4144-8701-3ccde2f9b9af\\\\scratchpad\\\\test-respawn.cjs\")",
       "Bash(node \"C:\\\\Users\\\\kent\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--Game-shinobi-valley\\\\1296a1a0-24bd-4144-8701-3ccde2f9b9af\\\\scratchpad\\\\test-respawn-10s.cjs\")",
       "Bash(node \"C:\\\\Users\\\\kent\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--Game-shinobi-valley\\\\1296a1a0-24bd-4144-8701-3ccde2f9b9af\\\\scratchpad\\\\test-peaceful.cjs\")",
-      "Bash(git restore *)"
+      "Bash(git restore *)",
+      "Bash(npx tsc *)",
+      "Bash(curl -s -o /dev/null -w * http://localhost:*)",
+      "Bash(python3 -c \"import ast; ast.parse\\(open\\(r'scripts/extract_video_sprite.py', encoding='utf-8'\\).read\\(\\)\\); print\\('syntax OK'\\)\")"
     ],
     "additionalDirectories": [
       "\\tmp"
