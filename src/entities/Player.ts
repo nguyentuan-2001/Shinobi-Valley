@@ -272,19 +272,26 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   }
 
   private computeHitboxRect(reach: number, size: number): Phaser.Geom.Rectangle {
-    const offsets: Record<Facing, { x: number; y: number }> = {
-      front: { x: 0, y: reach },
-      back: { x: 0, y: -reach },
-      left: { x: -reach, y: 0 },
-      right: { x: reach, y: 0 }
-    }
-    const offset = offsets[this.facing]
+    const offset = this.getFacingUnitVector()
     return new Phaser.Geom.Rectangle(
-      this.x + offset.x - size / 2,
-      this.y + offset.y - size / 2,
+      this.x + offset.x * reach - size / 2,
+      this.y + offset.y * reach - size / 2,
       size,
       size
     )
+  }
+
+  /** Vector đơn vị theo đúng hướng đang quay mặt (`facing`) — dùng chung cho hitbox đòn đánh (`computeHitboxRect`)
+   * lẫn việc GameScene ưu tiên ô đất/khối tương tác THEO HƯỚNG đang quay mặt thay vì chỉ tính khoảng cách thô
+   * (user phản hồi kèm ảnh: đang quay phải mà con trỏ lại trỏ sang ô bên trái vì ô đó vô tình gần chân hơn). */
+  getFacingUnitVector(): { x: number; y: number } {
+    const vectors: Record<Facing, { x: number; y: number }> = {
+      front: { x: 0, y: 1 },
+      back: { x: 0, y: -1 },
+      left: { x: -1, y: 0 },
+      right: { x: 1, y: 0 }
+    }
+    return vectors[this.facing]
   }
 
   private updateAnimation(moving: boolean): void {

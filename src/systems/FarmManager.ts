@@ -93,11 +93,19 @@ export class FarmManager {
    * tính là "gần" (trước đây dùng point-in-box nên phải đứng đúng hệt lên ô, user phản hồi khó dùng vì ô khá
    * nhỏ ~21px). Dùng chung 1 hàm này cho cả con trỏ báo (`findInteractionTarget`) lẫn tương tác Enter thật
    * (`interactWithFarmTile`) ở GameScene — để "thấy mũi tên trỏ vào" và "bấm Enter có tác dụng" luôn khớp
-   * nhau, không bao giờ lệch giữa 2 chỗ. */
-  findNearestTile(x: number, y: number, maxDistance: number): FarmTileRuntime | undefined {
+   * nhau, không bao giờ lệch giữa 2 chỗ. `excludeId` (tuỳ chọn): bỏ qua đúng 1 ô cụ thể — GameScene dùng để tìm
+   * ô GẦN NHÌ khi ô gần nhất đang bị người chơi đứng đè lên (con trỏ sẽ che mất người), xem
+   * `resolveFarmTileTarget()`. */
+  findNearestTile(
+    x: number,
+    y: number,
+    maxDistance: number,
+    excludeId?: number
+  ): FarmTileRuntime | undefined {
     let nearest: FarmTileRuntime | undefined
     let nearestDistance = maxDistance
     for (const tile of this.tiles) {
+      if (tile.id === excludeId) continue
       const distance = Math.hypot(tile.x - x, tile.y - y)
       if (distance <= nearestDistance) {
         nearest = tile

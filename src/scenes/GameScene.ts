@@ -110,6 +110,20 @@ const SOIL_TEXTURE_DISPLAY_SCALE: Partial<Record<string, number>> = {
  * luôn khớp nhau. Trước đây phải đứng chính xác lên trên ô (~10.5px, nửa cellWidth) mới tính, user phản hồi
  * khó dùng vì ô khá nhỏ — tăng lên rộng hơn hẳn kích thước 1 ô (21px) để đứng cạnh ô cũng trỏ/tương tác được. */
 const FARM_TILE_INTERACT_RADIUS = 32
+/** Khoảng thời gian (ms) sau khi dừng hẳn mà ràng buộc chống nhảy lùi vẫn còn áp dụng — bấm-nhả phím di chuyển
+ * liên tục (không giữ nguyên 1 phím) tạo ra nhiều lượt dừng NGẮN (~80-100ms) mỗi lần nhả phím, nếu bỏ ràng buộc
+ * ngay khi vận tốc về 0 thì đúng lúc dừng đó (né ô đè lên) có thể ra ô "lùi" thoáng 1 khung hình rồi bấm tiếp lại
+ * tiến — thấy như giật/nhảy. Lớn hơn khoảng dừng ngắn giữa các lượt bấm phím nhưng đủ nhỏ để không có cảm giác
+ * trễ khi thật sự dừng hẳn lại farm 1 ô. */
+const FARM_TILE_STOP_GRACE_MS = 220
+/** Nới rộng thêm mỗi cạnh ô khi kiểm "đang đứng đè lên" (`isStandingOnTile()`) — bù cho lệch HỆ THỐNG ~29px giữa
+ * điểm chân dùng để tìm ô (`body.bottom`) và toạ độ Y thật của ô (đo thực tế bằng Puppeteer): ở hàng CUỐI/hàng
+ * ĐẦU của 1 khu đất (không còn hàng kế tiếp để lệch "rơi vào"), khoảng lệch 29px này vượt xa nửa chiều cao ô
+ * (12px) + margin nhỏ, khiến `contains()` trả `false` dù đang đứng đúng ngay trên ô đó — user báo "quay trái mà
+ * con trỏ vẫn ở bên phải" chính là do rơi vào nhánh này (không né được, hiện lại ô RAW đã ở phía sau). Margin
+ * 20 đủ bù hẳn khoảng lệch 29px (12 + 20 = 32 > 29) mà không ảnh hưởng các ô ở giữa khu đất (lệch dư ra ở đó
+ * chỉ ~13px, đã đủ nằm trong ô gốc từ trước, tăng margin không đổi kết quả). */
+const FARM_TILE_STANDING_MARGIN = 20
 
 /** Toàn bộ 20 cây trong `crops.json` — chọn qua menu hạt giống (mở khi Enter lên ô đã cuốc). Chưa có
  * inventory/tiền/mở khoá theo level thật (đó là việc của Sprint 4) nên danh sách này coi như "có sẵn tất cả,
@@ -162,6 +176,13 @@ export class GameScene extends Phaser.Scene {
   private selectedCropId: string = PLANTABLE_CROP_IDS[1]
   /** Mũi tên báo "khối đang tương tác được" (ô đất dưới chân, nhà khi đứng gần...) — xem `updateInteractionPointer()`. */
   private interactionPointer!: Phaser.GameObjects.Image
+  /** Ô đất được `resolveFarmTileTarget()` trả về ở LẦN GỌI TRƯỚC — dùng để chặn "nhảy lùi" (user: "đang đi bên
+   * phải thì chỉ trỏ ô bên phải, không nhảy trỏ ngược về ô bên trái"). Xem chi tiết ở `resolveFarmTileTarget()`. */
+  private lastFarmTarget: FarmTileRuntime | undefined
+  /** Hướng di chuyển GẦN NHẤT còn nhớ được (dấu vx/vy, `0` nếu chưa từng đi) — khác `velocity` sống vì vận tốc
+   * đã VỀ 0 ngay khung hình vừa dừng, trong khi ràng buộc chống nhảy lùi cần nhớ hướng đó thêm 1 chút NỮA qua
+   * `FARM_TILE_STOP_GRACE_MS` (xem `resolveFarmTileTarget()`). */
+  private lastFarmMoveDir = { x: 0, y: 0 }
   private timeManager!: TimeManager
   /** Toạ độ Farm gần nhất của player, đọc lại được kể cả sau khi scene này shutdown (`this.player` là
    * GameObject, đã bị Phaser huỷ lúc đó — đọc trực tiếp `this.player.x/y` không an toàn). Cập nhật mỗi frame
@@ -301,11 +322,11 @@ export class GameScene extends Phaser.Scene {
     // trong lúc fade-in, không "kế thừa" giá trị `false` còn sót từ lần trước.
     this.isTransitioning = true
     this.createShadowTexture()
-    this.createInteractionPointerTexture()
     this.createMoistureOverlayTexture()
     this.createWaterDropletTexture()
     this.interactionPointer = this.add
       .image(0, 0, INTERACTION_POINTER_TEXTURE)
+      .setDisplaySize(20, 20)
       .setDepth(INTERACTION_POINTER_DEPTH)
       .setVisible(false)
     this.createSeedMenu()
@@ -714,7 +735,7 @@ export class GameScene extends Phaser.Scene {
       return { x: FISHING_SPOT.x, y: FISHING_SPOT.y - 20 }
     }
 
-    const tile = this.farmManager.findNearestTile(feetX, feetY, FARM_TILE_INTERACT_RADIUS)
+    const tile = this.resolveFarmTileTarget(feetX, feetY)
     if (tile) return { x: tile.x, y: tile.y - tile.height / 2 }
 
     const houseRadius = PLAYER_HOUSE.width * 0.7
@@ -725,6 +746,88 @@ export class GameScene extends Phaser.Scene {
     }
 
     return null
+  }
+
+  /** Ô đất GẦN NHẤT trong bán kính tương tác tính từ điểm chân THẬT (không lệch theo hướng quay mặt — bản trước
+   * dịch điểm dò tìm theo `facing` MỖI FRAME làm ô gần nhất đổi liên tục lúc đang đi, gây cảm giác "trỏ nhảy
+   * loạn", user phản hồi lại rồi). Đứng đè hẳn lên ô này (che con trỏ) thì đổi sang ô LÂN CẬN theo `facing`.
+   *
+   * **Chặn nhảy lùi** (user: "đang đi bên phải thì chỉ trỏ ô bên phải, không nhảy trỏ ngược về ô bên trái nữa"):
+   * ô các tile bao phủ gần kín khu đất (khe hở chỉ 2px) nên "đang đứng đè lên 1 ô nào đó" gần như luôn đúng khi
+   * đang di chuyển — kết quả ứng cử viên mỗi frame dễ dao động qua lại giữa "ô gần nhất thô" và "ô lân cận" (rõ
+   * nhất khi người chơi bấm-nhả phím liên tục thay vì giữ 1 phím, verify bằng Puppeteer thấy dao động 8→18→8→18).
+   * Sửa bằng cách nhớ lại `lastFarmTarget`/`lastFarmMoveDir` (ô + hướng đi ở lần gọi trước) — trong lúc VẪN ĐANG
+   * DI CHUYỂN hoặc mới dừng CHƯA QUÁ `FARM_TILE_STOP_GRACE_MS`, ứng cử viên mới phải tiến TỚI hoặc BẰNG theo
+   * đúng hướng đã đi mới được chấp nhận; lùi lại so với `lastFarmTarget` thì giữ nguyên `lastFarmTarget`. Dùng
+   * `lastFarmMoveDir` (nhớ lại, không đọc thẳng `velocity` — vận tốc đã VỀ 0 ngay khung hình vừa dừng) nên vẫn
+   * chặn được đúng 1 khung hình "nhảy lùi" xảy ra NGAY LÚC vừa dừng (bấm-nhả phím liên tục, verify thấy trước khi
+   * thêm grace-period). Dừng hẳn đủ lâu (qua khỏi grace period) thì bỏ ràng buộc — cho phép né ô đè lên tự nhiên
+   * (đúng tinh thần yêu cầu gốc: đứng yên nhìn ruộng thì né, không phải đang đi ngang qua). */
+  private resolveFarmTileTarget(feetX: number, feetY: number): FarmTileRuntime | undefined {
+    const nearest = this.farmManager.findNearestTile(feetX, feetY, FARM_TILE_INTERACT_RADIUS)
+    if (!nearest) {
+      this.lastFarmTarget = undefined
+      this.lastFarmMoveDir = { x: 0, y: 0 }
+      return undefined
+    }
+
+    let candidate: FarmTileRuntime | undefined = nearest
+    if (this.isStandingOnTile(nearest, feetX, feetY)) {
+      const facing = this.player.getFacingUnitVector()
+      // Không tìm được ô lân cận đúng hướng đang quay mặt (đứng ở rìa khu đất, hết ô để trỏ tiếp về hướng đó) —
+      // user yêu cầu ẨN HẲN con trỏ, KHÔNG rơi về lại ô đang đứng đè (nếu rơi về sẽ trông như trỏ NGƯỢC hướng
+      // đang quay mặt — đúng bug user báo: quay trái mà con trỏ lại hiện bên phải người).
+      candidate = this.farmManager.findNearestTile(
+        nearest.x + facing.x * nearest.width,
+        nearest.y + facing.y * nearest.height,
+        FARM_TILE_INTERACT_RADIUS,
+        nearest.id
+      )
+    }
+
+    const velocity = (this.player.body as Phaser.Physics.Arcade.Body).velocity
+    if (velocity.x !== 0 || velocity.y !== 0) {
+      this.lastFarmMoveDir = { x: Math.sign(velocity.x), y: Math.sign(velocity.y) }
+    }
+
+    const last = this.lastFarmTarget
+    const withinGracePeriod = this.player.getStationaryDurationMs() < FARM_TILE_STOP_GRACE_MS
+    if (
+      candidate &&
+      last &&
+      withinGracePeriod &&
+      Phaser.Math.Distance.Between(feetX, feetY, last.x, last.y) <= FARM_TILE_INTERACT_RADIUS
+    ) {
+      const dir = this.lastFarmMoveDir
+      const isBackward =
+        (dir.x > 0 && candidate.x < last.x) ||
+        (dir.x < 0 && candidate.x > last.x) ||
+        (dir.y > 0 && candidate.y < last.y) ||
+        (dir.y < 0 && candidate.y > last.y)
+      if (isBackward) return last
+    }
+
+    this.lastFarmTarget = candidate
+    return candidate
+  }
+
+  /** Điểm chân (`feetX/feetY` — CHÍNH XÁC 1 điểm, không phải cả bbox sprite) có nằm BÊN TRONG hình chữ nhật của
+   * ô (nới rộng thêm `FARM_TILE_STANDING_MARGIN` mỗi cạnh) hay không — đúng nghĩa "đứng đè lên" (feet nằm trong
+   * ô). Cố tình KHÔNG dùng `player.getBounds()` (bbox cả sprite, ~53×66px — to hơn hẳn 1 ô ~24×24px) như bản
+   * đầu: bbox to hơn ô rất nhiều nên gần như LÚC NÀO đứng gần ô cũng tính là "đè lên", khiến
+   * `resolveFarmTileTarget()` đổi ô liên tục/luôn lệch sang ô lân cận dù chân đang đứng hẳn ở ô khác hoàn toàn —
+   * bug thật phát hiện khi user báo thanh giờ/con trỏ hiện lệch nhau. Nới rộng thêm biên (thay vì đúng khít ô)
+   * vì bug thật khác gặp sau đó: chân lệch ra ngoài rìa ô ĐÚNG 0.07px (dừng ở rìa do tốc độ/deltaTime) đã đủ để
+   * `contains()` trả `false`, khiến hàm gọi rơi thẳng về nhánh "không đè" và hiện lại ô RAW (giờ đã ở phía SAU
+   * hướng đang quay mặt) thay vì né/ẩn đúng như logic bên dưới — user báo "quay trái mà con trỏ vẫn ở bên phải". */
+  private isStandingOnTile(tile: FarmTileRuntime, feetX: number, feetY: number): boolean {
+    const tileRect = new Phaser.Geom.Rectangle(
+      tile.x - tile.width / 2 - FARM_TILE_STANDING_MARGIN,
+      tile.y - tile.height / 2 - FARM_TILE_STANDING_MARGIN,
+      tile.width + FARM_TILE_STANDING_MARGIN * 2,
+      tile.height + FARM_TILE_STANDING_MARGIN * 2
+    )
+    return tileRect.contains(feetX, feetY)
   }
 
   /** Gọi mỗi frame — hiện/ẩn + di chuyển con trỏ theo khối gần nhất tìm được ở `findInteractionTarget()`, thêm
@@ -769,11 +872,7 @@ export class GameScene extends Phaser.Scene {
     if (this.tryInteractWithFishing()) return
 
     const body = this.player.body as Phaser.Physics.Arcade.Body
-    const tile = this.farmManager.findNearestTile(
-      body.center.x,
-      body.bottom,
-      FARM_TILE_INTERACT_RADIUS
-    )
+    const tile = this.resolveFarmTileTarget(body.center.x, body.bottom)
     if (!tile) return
 
     if (tile.state === 'empty') {
@@ -1040,12 +1139,14 @@ export class GameScene extends Phaser.Scene {
    * upload lại GPU texture mỗi frame khi không có gì đổi (90 ô, chạy mỗi frame, không nên làm dư việc). */
   private syncFarmVisuals() {
     // User yêu cầu: thanh sản lượng/đếm giờ chỉ hiện ở ô đang TRỎ VÀO (đứng gần, đúng bán kính tương tác),
-    // không hiện tràn lan ở mọi ô đang trồng cùng lúc — tính 1 lần dùng lại cho cả vòng lặp, cùng bán kính/toạ
-    // độ với `findInteractionTarget()` để "thấy thanh hiện" và "Enter tương tác được" luôn khớp đúng 1 ô.
+    // không hiện tràn lan ở mọi ô đang trồng cùng lúc — tính 1 lần dùng lại cho cả vòng lặp. Bug đã gặp: chỗ này
+    // trước gọi thẳng `farmManager.findNearestTile()` (ô RAW gần nhất) thay vì `resolveFarmTileTarget()` (ô con
+    // trỏ THẬT SỰ đang hiện, có thể đã đổi sang ô lân cận để tránh đè lên người) — user phản hồi kèm ảnh: con
+    // trỏ trỏ 1 ô nhưng thanh giờ/năng lượng lại hiện ở ô khác. Dùng CHUNG `resolveFarmTileTarget()` (đã có sẵn,
+    // cũng là hàm `findInteractionTarget()`/`interactWithFarmTile()` dùng) để "thấy thanh hiện", "thấy con trỏ
+    // trỏ vào" và "Enter tương tác được" luôn khớp đúng 1 ô duy nhất, không còn lệch giữa các chỗ.
     const body = this.player.body as Phaser.Physics.Arcade.Body
-    const pointedTileId =
-      this.farmManager.findNearestTile(body.center.x, body.bottom, FARM_TILE_INTERACT_RADIUS)?.id ??
-      null
+    const pointedTileId = this.resolveFarmTileTarget(body.center.x, body.bottom)?.id ?? null
 
     for (const tile of this.farmManager.getTiles()) {
       const soilImage = this.soilImages.get(tile.id)
@@ -1821,44 +1922,6 @@ export class GameScene extends Phaser.Scene {
     ctx.fill()
     canvasTexture.refresh()
     this.textures.get(SHADOW_TEXTURE).setFilter(Phaser.Textures.FilterMode.LINEAR)
-  }
-
-  /** Texture mũi tên báo khối tương tác được (vẽ bằng code, không cần asset riêng) — hình thoi/kim cương vàng
-   * viền nâu đậm kiểu pixel-art, chóp nhọn hướng xuống để chỉ đúng khối bên dưới nó. Vẽ to hơn kích thước hiển
-   * thị thật (`create()` sẽ không scale lại) rồi bật LINEAR filter — tương tự lý do ở `createShadowTexture()`. */
-  private createInteractionPointerTexture() {
-    if (this.textures.exists(INTERACTION_POINTER_TEXTURE)) return
-    const width = 22
-    const height = 26
-    const canvasTexture = this.textures.createCanvas(INTERACTION_POINTER_TEXTURE, width, height)
-    if (!canvasTexture) return
-    const ctx = canvasTexture.getContext()
-    const cx = width / 2
-
-    // Kim cương: đỉnh trên phẳng-ish, chóp dưới nhọn hẳn xuống để rõ ràng đang "trỏ vào" khối bên dưới.
-    ctx.beginPath()
-    ctx.moveTo(cx, 2)
-    ctx.lineTo(width - 2, 11)
-    ctx.lineTo(cx, height - 2)
-    ctx.lineTo(2, 11)
-    ctx.closePath()
-    ctx.fillStyle = '#FFD963' // đúng màu vàng đã dùng cho spinner loading (art-refs/theme.md)
-    ctx.fill()
-    ctx.lineWidth = 2
-    ctx.strokeStyle = '#7A4A1F'
-    ctx.stroke()
-
-    // Highlight nhỏ góc trên-trái cho có chiều sâu, đỡ phẳng.
-    ctx.beginPath()
-    ctx.moveTo(cx, 5)
-    ctx.lineTo(cx - 6, 11)
-    ctx.lineTo(cx, 9)
-    ctx.closePath()
-    ctx.fillStyle = 'rgba(255,255,255,0.55)'
-    ctx.fill()
-
-    canvasTexture.refresh()
-    this.textures.get(INTERACTION_POINTER_TEXTURE).setFilter(Phaser.Textures.FilterMode.LINEAR)
   }
 
   /** Overlay đất ẩm tạm (vẽ bằng code, không cần asset riêng — xem `syncFarmVisuals()`) — 1 ô vuông xanh-nâu

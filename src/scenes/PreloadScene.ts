@@ -64,6 +64,10 @@ export class PreloadScene extends Phaser.Scene {
     this.load.image('farm_soil_tilled', '/assets/tilesets/farm/soil_tilled.png')
     this.load.image('farm_soil_water_pot', '/assets/tilesets/farm/soil_water_pot.png')
 
+    // Con trỏ báo khối tương tác được (GameScene.updateInteractionPointer()) — asset thật user gửi, thay cho
+    // texture vẽ bằng code lúc trước (hình thoi vàng → cờ hiệu → giờ dùng hẳn file này).
+    this.load.image('interaction_pointer', '/assets/ui/interaction_pointer.png')
+
     // Sprite cây trồng — đủ 20 cây trong crops.json (khớp `GameScene.PLANTABLE_CROP_IDS`), mỗi cây 4 giai đoạn
     // hiển thị trên map (seed/sprout/growing/harvest — harvest = cây chín còn trên đất, load riêng file
     // `<id>_harvest.png`). Load thêm key `crop_<id>_item` từ `<id>.png` (item icon) — dùng cho hiệu ứng bay
