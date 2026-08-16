@@ -68,7 +68,10 @@
       "Bash(git restore *)",
       "Bash(npx tsc *)",
       "Bash(curl -s -o /dev/null -w * http://localhost:*)",
-      "Bash(python3 -c \"import ast; ast.parse\\(open\\(r'scripts/extract_video_sprite.py', encoding='utf-8'\\).read\\(\\)\\); print\\('syntax OK'\\)\")"
+      "Bash(python3 -c \"import ast; ast.parse\\(open\\(r'scripts/extract_video_sprite.py', encoding='utf-8'\\).read\\(\\)\\); print\\('syntax OK'\\)\")",
+      "Bash(gh repo *)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)"
     ],
     "additionalDirectories": [
       "\\tmp"
