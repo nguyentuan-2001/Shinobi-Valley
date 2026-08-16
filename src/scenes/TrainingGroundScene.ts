@@ -13,6 +13,7 @@ import { TargetSelector } from '../systems/TargetSelector'
 import type { CharacterPanel } from '../systems/CharacterPanel'
 import type { Skill } from '../data/types'
 import { UIScene } from './UIScene'
+import { COMBAT_CONTROLS } from '../data/controlsHelp'
 
 const MAP_WIDTH = 700
 const MAP_HEIGHT = 550
@@ -69,6 +70,7 @@ export class TrainingGroundScene extends Phaser.Scene {
     syncCombatHudToRegistry(this)
     this.hotbar = new SkillHotbar(this, combatManager.getWeaponSkillClass())
     bindSkillHotbarInput(this, this.hotbar, this.player)
+    this.registry.set('controlsHelpEntries', COMBAT_CONTROLS)
     this.scene.launch('UIScene')
 
     this.add

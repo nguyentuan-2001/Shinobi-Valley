@@ -28,6 +28,7 @@ import { hasSaveGame, loadGame, saveGame } from '../systems/SaveManager'
 import type { SaveState, Fish } from '../data/types'
 import { UIScene } from './UIScene'
 import type { CharacterPanel } from '../systems/CharacterPanel'
+import { FARM_CONTROLS } from '../data/controlsHelp'
 
 /** Nền luôn ở dưới cùng, không tham gia Y-sort với player/prop khác (xem hàm depth ở Player.ts). */
 const GROUND_DEPTH = -10000
@@ -445,6 +446,7 @@ export class GameScene extends Phaser.Scene {
     this.selectSeed(this.selectedCropId)
     this.updateTimeHud()
     syncCombatHudToRegistry(this)
+    this.registry.set('controlsHelpEntries', FARM_CONTROLS)
     this.scene.launch('UIScene')
 
     fadeInScene(this, () => {

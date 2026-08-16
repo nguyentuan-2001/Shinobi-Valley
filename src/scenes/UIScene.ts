@@ -1,5 +1,7 @@
 import Phaser from 'phaser'
 import { CharacterPanel, bindCharacterPanelInput } from '../systems/CharacterPanel'
+import { ControlsHelpPanel, bindControlsHelpInput } from '../systems/ControlsHelp'
+import type { ControlEntry } from '../data/controlsHelp'
 
 export class UIScene extends Phaser.Scene {
   /** Bảng nhân vật PHẢI sống ở đây, không phải ở scene gameplay đang active (Game/Grassland/TrainingGround) —
@@ -10,6 +12,9 @@ export class UIScene extends Phaser.Scene {
    * background gần như đục). Các scene gameplay chỉ ĐỌC lại instance này qua `getCharacterPanel()` (xem đó ở
    * mỗi scene), không tự tạo riêng. */
   characterPanel!: CharacterPanel
+  /** Bảng phím tắt (Z) — cùng lý do sống ở `UIScene` như `characterPanel` ở trên. Nội dung đọc động từ registry
+   * `controlsHelpEntries`, mỗi scene gameplay tự ghi danh sách phím riêng của nó (xem `data/controlsHelp.ts`). */
+  private controlsHelpPanel!: ControlsHelpPanel
 
   constructor() {
     super({ key: 'UIScene' })
@@ -21,10 +26,25 @@ export class UIScene extends Phaser.Scene {
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) =>
       this.characterPanel.handlePointerDown(pointer)
     )
+
+    this.controlsHelpPanel = new ControlsHelpPanel(this)
+    bindControlsHelpInput(
+      this,
+      this.controlsHelpPanel,
+      () => (this.registry.get('controlsHelpEntries') as ControlEntry[] | undefined) ?? []
+    )
+
+    // Esc ưu tiên đóng bảng phím tắt trước (nếu đang mở) rồi mới tới bảng nhân vật — 2 bảng không mở cùng lúc
+    // trong thực tế (Z/C đều chỉ toggle của riêng mình) nhưng vẫn cần thứ tự rõ ràng phòng hờ.
     this.input.keyboard!.on('keydown-ESC', (event: KeyboardEvent) => {
-      if (event.repeat || !this.characterPanel.isOpen) return
-      event.preventDefault()
-      this.characterPanel.close()
+      if (event.repeat) return
+      if (this.controlsHelpPanel.isOpen) {
+        event.preventDefault()
+        this.controlsHelpPanel.close()
+      } else if (this.characterPanel.isOpen) {
+        event.preventDefault()
+        this.characterPanel.close()
+      }
     })
 
     // UI chạy song song với GameScene/TrainingGroundScene/GrasslandScene (không replace) — HP/MP/EXP giờ đọc

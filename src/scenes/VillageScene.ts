@@ -13,6 +13,7 @@ import { npcRelationshipManager } from '../systems/NpcRelationshipManager'
 import { getBuyCatalog, getSellableInventory, type ShopCatalogEntry } from '../systems/Shop'
 import type { CharacterPanel } from '../systems/CharacterPanel'
 import { UIScene } from './UIScene'
+import { VILLAGE_CONTROLS } from '../data/controlsHelp'
 
 const MAP_WIDTH = 960
 const MAP_HEIGHT = 600
@@ -71,6 +72,7 @@ export class VillageScene extends Phaser.Scene {
 
     this.cameras.main.startFollow(this.player, true)
     syncCombatHudToRegistry(this)
+    this.registry.set('controlsHelpEntries', VILLAGE_CONTROLS)
     this.scene.launch('UIScene')
 
     this.createDialogueUI()

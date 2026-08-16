@@ -24,6 +24,7 @@ import { TargetSelector } from '../systems/TargetSelector'
 import type { CharacterPanel } from '../systems/CharacterPanel'
 import type { Skill } from '../data/types'
 import { UIScene } from './UIScene'
+import { COMBAT_CONTROLS } from '../data/controlsHelp'
 
 const GROUND_TEXTURE = 'ancient_forest_bg'
 const DEATH_RESPAWN_POINT = { x: 890, y: 430 }
@@ -87,6 +88,7 @@ export class RungCoScene extends Phaser.Scene {
     this.cameras.main.startFollow(this.player, true)
     syncCombatHudToRegistry(this)
     bindSkillHotbarInput(this, this.hotbar, this.player)
+    this.registry.set('controlsHelpEntries', COMBAT_CONTROLS)
     this.scene.launch('UIScene')
 
     this.add
