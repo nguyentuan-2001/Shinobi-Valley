@@ -544,6 +544,166 @@ sung thử nghiệm ngoài spec, KHÔNG sửa lại tài liệu thiết kế g�
 - `UIScene.ts`: `keydown-ESC` giờ ưu tiên đóng bảng phím tắt trước (nếu đang mở) rồi mới tới bảng nhân vật.
 - Đã verify bằng Puppeteer: Z mở/đóng đúng ở Farm (13 dòng, không chữ chồng), Z/Esc đều đóng được; chuyển sang Bãi Tập Luyện (combat scene) → `registry.controlsHelpEntries` tự đổi đúng sang `COMBAT_CONTROLS` (8 dòng), Z mở đúng bảng combat, không lỗi console mới.
 
+## Ngoài lịch sprint — 6 công trình mới trên Farm + Nhà chính/Giếng nước dùng art thật ngày/đêm
+
+- User tự cắt sẵn 8 sprite công trình nông trại (cửa hàng hạt giống/tổng hợp, giếng nước, kho chứa, lò rèn, nhà
+  chính, nhà giả kim, quầy thu mua) thành 2 thư mục `public/assets/sprites/buildings/bright/`/`night/` (mỗi cái
+  1 file, ảnh gốc canvas 250x250) và yêu cầu dùng để thêm công trình lên map — hỏi rõ phạm vi trước khi làm (map
+  nào, xử lý building `kho_chua` không khớp tên NPC nào, Village có cần ngày/đêm không) vì tên 6/8 building
+  trùng building label của NPC trong `npcPlacements.ts` (Làng Ẩn Nhân) nhưng dễ hiểu nhầm là phải gắn logic
+  shop/NPC thật — user chốt: **tất cả 8 đưa vào map Farm** (không đụng Village), `kho_chua` chỉ làm trang trí.
+- **`src/data/farmBuildingPlacements.ts`** (mới) — toạ độ/kích thước 6 công trình mới (không tính nhà/giếng, đã
+  có file riêng), đặt ở khoảnh cỏ mở phía bắc map (giữa cối xay gió/cột đèn baked sẵn trong nền và cụm ô đất) —
+  dò vị trí bằng mắt qua screenshot Puppeteer (windmill/lantern là ảnh vẽ sẵn trong `BaseMap.png`, không phải
+  GameObject nên không có toạ độ chính xác để tính).
+- **`housePlacement.ts`/`wellPlacement.ts`**: Nhà chính (cấp 1) và Giếng nước đổi sang dùng art thật
+  `building_nha_chinh_*`/`building_gieng_nuoc_*` thay cho `player_house_1.png` cũ và texture giếng vẽ bằng code
+  cũ (`GameScene.createWellTexture()`, đã xoá hẳn). Cấp 2/3 nhà (`player_house_2/3.png`) CHƯA có bản đêm — giữ
+  nguyên art cũ, fallback hiện bản ngày cả lúc đêm (chấp nhận được vì 2 cấp này chưa từng được đặt lên map thật).
+- **Bug thật gặp khi verify bằng Puppeteer — sprite "biến mất"**: cả 8 ảnh bright/night đều là canvas 250x250 CÓ
+  VIỀN TRONG SUỐT rất lớn quanh nội dung thật (không phải ảnh đã crop khít như `player_house_1.png` cũ) — dùng
+  thẳng kích thước NỘI DUNG mong muốn cho `setDisplaySize()` sẽ scale nhầm luôn cả viền trong suốt đó, khiến nội
+  dung thật hiện ra nhỏ hơn nhiều so với ý định (giếng nước gần như biến mất vì bounding box thật chỉ chiếm ~31%
+  canvas — đo bằng Pillow `Image.getbbox()`). **Sửa**: mỗi công trình có 2 kích thước tách biệt — `width`/`height`
+  (footprint thật theo tỉ lệ bounding-box, dùng cho `bottomY`/collision zone) và `canvasSize` (cạnh vuông thật
+  truyền cho `setDisplaySize()`, = `width * 250 / bboxWidth`). Áp dụng cho cả nhà cấp 1 (`HOUSE_LEVEL_DISPLAY_SIZE`)
+  và giếng (`WELL_CANVAS_SIZE`).
+- **`src/data/collisionZones.ts`**: đổi tên "Khu mới 2" → "Nhà chính" (chỉnh top zone 393→370 khớp chiều cao
+  mới của nhà), thêm 6 zone hình chữ nhật mới (Cửa hàng hạt giống/Kho chứa/Quầy thu mua/Lò rèn/Nhà giả kim/Cửa
+  hàng tổng hợp) khớp đúng footprint từng công trình.
+- **`src/scenes/GameScene.ts`** — user yêu cầu thêm: mọi công trình phải đổi bản ngày/đêm **cùng lúc** với nền
+  map (không lệch nhịp). Gom TẤT CẢ cặp ảnh "bản ngày"/"bản đêm" (nền, nhà, giếng, 6 công trình mới) vào 1 mảng
+  `dayNightPairs`, `updateDayNightVisuals()` chỉ còn đúng 1 vòng lặp `setAlpha()` — đảm bảo đồng bộ tuyệt đối
+  trong cùng 1 frame dù thêm bao nhiêu công trình sau này. Mỗi cặp bright/night đặt cùng vị trí, night depth =
+  bright depth + 0.01 (không dựa vào thứ tự `this.add.image()` để quyết định lớp nào vẽ trên).
+- Đã verify bằng Puppeteer: cả 8 công trình hiện đúng kích thước/vị trí ban ngày, không đè lên cối xay gió/cột
+  đèn baked sẵn; nhảy đồng hồ game (phím T debug) tới 18h → toàn bộ nền + nhà + giếng + 6 công trình chuyển
+  sang bản đêm ĐÚNG CÙNG 1 lúc (đèn lồng/cửa sổ sáng); va chạm hoạt động đúng (teleport player vào giữa "Lò
+  rèn" → bị đẩy ra ngoài đúng biên zone, có tính offset ~29px chân/`player.y`).
+- **Cập nhật ngay sau đó — user báo "đang ban đêm mà nó hiện cả frame của ban ngày"** (kèm ảnh chụp: viền glow
+  xanh lá quanh mỗi công trình lúc trời tối): bản đầu để bản ngày giữ alpha=1 CỐ ĐỊNH, chỉ chồng bản đêm lên
+  trên (giống hệt cách nền map làm) — nhưng nền map là 1 hình chữ nhật đặc kín 100% (2 bản khớp pixel-for-pixel
+  nên không lộ), còn 8 sprite công trình có viền trong suốt + glow mềm KHÔNG khớp khít giữa bản ngày/đêm, nên
+  phần viền/glow của bản ngày vẫn lộ ra quanh bản đêm dù đã alpha=1 đè lên trên. **Sửa**: đổi `dayNightNightLayers`
+  (mảng chỉ chứa ảnh đêm) thành `dayNightPairs` (mảng cặp `{day, night}`) — `updateDayNightVisuals()` giờ set
+  CẢ HAI: `day.setAlpha(isNight?0:1)` và `night.setAlpha(isNight?1:0)`, loại trừ lẫn nhau hoàn toàn, tại 1 thời
+  điểm chỉ 1 trong 2 lớp có alpha>0. Áp dụng luôn cho cặp nền map (dù nền không bị bug này, đổi cho đồng nhất 1
+  cơ chế duy nhất). Đã verify bằng Puppeteer: đọc thẳng `alpha` runtime của cả 9 cặp lúc 18h — toàn bộ `day`
+  alpha đều =0, `night` alpha đều =1 (không còn cặp nào lộ cả 2); chụp ảnh xác nhận không còn viền glow ban
+  ngày quanh công trình lúc trời tối.
+- **Cập nhật ngay sau đó — user tự chỉnh lại vị trí "Lò rèn" (850,320 → 1143,343) + tắt hẳn 6 collision zone
+  mới trong `collisionZones.ts` (comment out) qua EditorScene, rồi hỏi "muốn giữ nguyên size ảnh gốc có được
+  không?"**: bản trước tự chọn 1 "kích thước mục tiêu" cho mỗi công trình (85-130px) rồi suy ngược `canvasSize`
+  — ép các công trình về cỡ gần giống nhau, làm mất tỉ lệ to/nhỏ THẬT giữa chúng trong bộ art gốc (vd. Lò rèn
+  vốn to gần gấp đôi Quầy thu mua). **Sửa**: `width`/`height` (footprint) của cả 8 công trình (nhà chính, giếng
+  nước, 6 công trình mới) đổi thành ĐÚNG BẰNG bounding-box alpha đo thật bằng Pillow (không co/giãn về khung tự
+  chọn nữa), và `canvasSize`/`HOUSE_LEVEL_DISPLAY_SIZE[1]`/`WELL_CANVAS_SIZE` đổi thẳng thành `250` (đúng bằng
+  cỡ canvas gốc — vì canvas KHÔNG co giãn thì nội dung hiển thị đúng bằng kích thước pixel gốc trong file, xem
+  giải thích ở `farmBuildingPlacements.ts`). Kết quả: công trình to hơn hẳn bản trước (khớp scale thật với art
+  gốc) — Lò rèn/Cửa hàng tổng hợp rõ ràng to hơn Quầy thu mua/Cửa hàng hạt giống, đúng tỉ lệ ảnh gốc. Cập nhật
+  `collisionZones.ts` mục "Nhà chính" khớp size mới (593-807, 329.5-510.5) — riêng 6 zone công trình mới VẪN
+  ĐỂ NGUYÊN Ở TRẠNG THÁI USER ĐÃ TẮT (comment out), chưa bật lại/cập nhật toạ độ theo size+vị trí mới, vì user
+  đang tự chỉnh vị trí qua EditorScene (lò rèn đã đổi 1 lần) — chờ user chốt xong vị trí cuối cùng rồi mới nên
+  tính lại + bật lại collision cho 6 công trình đó. Đã verify bằng Puppeteer: kích thước/tỉ lệ hiển thị đúng ảnh
+  gốc, không đè lên hàng rào/cối xay gió; ngày/đêm vẫn chuyển đúng loại trừ lẫn nhau ở size mới; xác nhận đúng ý
+  đồ user — teleport vào giữa Lò rèn (vị trí mới) KHÔNG bị đẩy ra (đúng vì zone đó đang tắt, không phải bug).
+- **Cập nhật ngay sau đó — tạm ẩn hàng rào chuồng gà/vịt**: user đang thử vị trí 6 công trình mới quanh khu
+  chuồng (`ANIMAL_PEN_SLOTS`), muốn tạm bỏ hàng rào (`FENCE_PLACEMENTS`, vẽ bởi `placeFence()`) khỏi tầm nhìn
+  cho dễ canh. Thêm hằng số `SHOW_ANIMAL_FENCE = false` ở `GameScene.ts`, bọc lời gọi `this.placeFence()` trong
+  `if (SHOW_ANIMAL_FENCE)` — data (`FENCE_PLACEMENTS`) và va chạm ("Khu mới 3") giữ nguyên, chỉ tắt bước VẼ.
+  Đổi hằng số về `true` để hiện lại.
+- **Cập nhật ngay sau đó — công cụ kéo-thả đặt vị trí công trình (phím P)**: user muốn 1 công cụ giống
+  `EditorScene` (phím Q, chỉnh vùng va chạm) nhưng để KÉO-THẢ đổi vị trí 8 công trình nông trại thay vì chỉnh
+  đa giác va chạm. Thêm `src/scenes/BuildingEditorScene.ts` (scene mới, đăng ký trong `main.ts`, mở bằng phím P
+  từ `GameScene` — cùng cơ chế bấm Q mở `EditorScene`): vẽ nền + ô đất/hàng rào tĩnh (`renderStaticWorldDecorations`,
+  thêm tham số `skipHouse` để không vẽ tĩnh đè lên nhà chính — nhà chính giờ là 1 trong 8 object kéo được) + 8
+  ảnh công trình (Nhà chính, Giếng nước, 6 công trình mới) dùng THẲNG `setInteractive({ draggable: true })` gốc
+  của Phaser (khác `EditorScene` phải tự hit-test tay vì đó là UI `scrollFactor(0)` — ở đây toàn world object
+  nên drag gốc chạy đúng, không cần tự làm lại). Phím E xuất toạ độ hiện tại ra ô text — vì Nhà chính/Giếng
+  nước không nằm trong `FARM_BUILDING_PLACEMENTS` (có file riêng `housePlacement.ts`/`wellPlacement.ts`), ô
+  export in 3 khối riêng: `HOUSE_CENTER`, `WELL_PLACEMENT.x/y`, và mảng `FARM_BUILDING_PLACEMENTS` đầy đủ (dán
+  đè lại đúng 3 chỗ tương ứng). Phím P quay lại GameScene. Đã verify bằng Puppeteer: vào/ra scene đúng, kéo 1
+  công trình (Lò rèn) di chuyển đúng theo con trỏ (test bằng `page.mouse.move/down/up` mô phỏng kéo chuột thật,
+  đọc lại toạ độ runtime khớp đúng), xuất dữ liệu đúng định dạng và đúng giá trị đã kéo, các công trình khác
+  không bị ảnh hưởng ngoài ý muốn.
+- **Cập nhật ngay sau đó — tách vị trí công trình riêng theo ngày/đêm**: user chỉ ra `BaseMap.png`/
+  `BaseMap_night.png` là 2 ẢNH KHÁC NHAU (không phải cùng 1 ảnh chỉnh tối đi), nên 1 toạ độ dùng chung cho cả
+  bản ngày lẫn đêm dễ đúng ở bản này nhưng lệch/đè lên tiểu tiết (đường mòn, bụi cây...) ở bản kia — yêu cầu
+  tách riêng thành 2 mảng vị trí độc lập.
+  - `farmBuildingPlacements.ts`: `FARM_BUILDING_PLACEMENTS` (1 mảng) → `FARM_BUILDING_PLACEMENTS_DAY` +
+    `_NIGHT` (2 mảng cùng cấu trúc, khớp theo `id`). `housePlacement.ts`: `HOUSE_CENTER` → `HOUSE_CENTER_DAY`/
+    `_NIGHT`, `PLAYER_HOUSE` → `PLAYER_HOUSE_DAY`/`PLAYER_HOUSE_NIGHT`. `wellPlacement.ts`: `WELL_PLACEMENT` →
+    `WELL_PLACEMENT_DAY`/`_NIGHT`. Mảng/giá trị NIGHT khởi tạo giống hệt DAY (chưa canh riêng), user tự kéo
+    chỉnh sau bằng công cụ bên dưới.
+  - `GameScene.ts`: `placeHouse()`/`placeWell()`/`placeFarmBuildings()` giờ đặt ảnh bright tại vị trí DAY, ảnh
+    night tại vị trí NIGHT (độc lập hoàn toàn, không còn dùng chung 1 toạ độ) — vẫn đẩy cả 2 vào `dayNightPairs`
+    nên đồng bộ thời điểm chuyển vẫn đúng (chỉ khác toạ độ, không khác nhịp). `findInteractionTarget()` (con
+    trỏ tương tác gần nhà) đổi sang đọc ĐÚNG bản đang hiện (`isNight() ? PLAYER_HOUSE_NIGHT : ...DAY`) thay vì
+    cố định 1 bản. `autoWaterNearWell()` (gameplay, không phải hiển thị) cố định dùng `WELL_PLACEMENT_DAY` làm
+    mốc — chấp nhận được vì 2 vị trí chỉ nên lệch vài chục px để canh pixel, không ảnh hưởng bán kính tưới.
+  - `WorldDecorations.ts` (dùng cho `EditorScene`, luôn nền ngày) đổi sang đọc `PLAYER_HOUSE_DAY`.
+  - `BuildingEditorScene.ts` — thêm hẳn **chế độ ngày/đêm (phím N)**: đổi cả texture nền (`farm_background` ↔
+    `farm_background_night`) LẪN texture/vị trí từng công trình sang đúng bản đang xem, kéo-thả ở chế độ nào
+    chỉ ghi đè vị trí của đúng chế độ đó (2 vị trí lưu tách biệt trong từng `EditableBuilding`, không đụng vào
+    nhau). Banner góc trên hiện rõ đang ở chế độ nào (☀/🌙). Phím E giờ xuất TOÀN BỘ 2 bộ toạ độ (ngày + đêm)
+    cùng lúc, không chỉ bộ đang xem — dán đè đủ cả 2 mảng `FARM_BUILDING_PLACEMENTS_DAY`/`_NIGHT` +
+    `HOUSE_CENTER_DAY`/`_NIGHT` + `WELL_PLACEMENT_DAY`/`_NIGHT`.
+  - Đã verify bằng Puppeteer: bấm N đổi đúng nền + texture công trình sang bản đêm; kéo giếng nước ở chế độ
+    ĐÊM chỉ đổi toạ độ `night` (780,600 → 815,635), toạ độ `day` giữ nguyên (780,600) — xác nhận 2 vị trí độc
+    lập thật; xuất dữ liệu đúng cả 2 mảng; quay lại GameScene, nhảy đồng hồ tới 18h — toàn bộ 9 cặp
+    (nền+nhà+giếng+6 công trình) đều `day.alpha=0, night.alpha=1` đồng loạt, xác nhận đồng bộ thời điểm chuyển
+    không bị ảnh hưởng bởi việc tách vị trí.
+  - **Vấn đề đã biết**: vùng va chạm "Nhà chính" trong `collisionZones.ts` (593-807, 329.5-510.5) được tính từ
+    `HOUSE_CENTER` cũ (700,420) — từ khi user tự kéo nhà sang (684,393) bằng `BuildingEditorScene`, zone này đã
+    LỆCH so với vị trí thật, chưa được cập nhật lại (nằm ngoài phạm vi yêu cầu của việc tách ngày/đêm lần này).
+- **Cập nhật ngay sau đó — gộp TOÀN BỘ vị trí vật phẩm đặt trên map Farm về đúng 2 file (ngày/đêm)**: user yêu
+  cầu đưa cả vị trí Nhà chính + hàng rào vào chung hệ thống với 6 công trình mới, "đây là nơi lưu các vị trí
+  vật phẩm đặt trên map" — tách thành đúng 2 file cho ngày/đêm, tạm thời copy dữ liệu 2 bên giống nhau.
+  - **`src/data/mapPlacementsDay.ts`** (mới) — nơi lưu DUY NHẤT mọi vị trí tĩnh trên map Farm bản ngày:
+    `HOUSE_PLACEMENT`, `WELL_PLACEMENT`, `FENCE_PLACEMENTS` (gồm luôn logic sinh nhiều đoạn rào từ `FENCE_RECT`/
+    `FENCE_RUNS`, chuyển nguyên từ `fencePlacements.ts` cũ), `FARM_BUILDING_PLACEMENTS`.
+  - **`src/data/mapPlacementsNight.ts`** (mới) — bản song sinh cho ĐÊM, import từ `mapPlacementsDay.ts` rồi
+    sao chép (`{...}`/`.map()`) — TẠM THỜI giống hệt bản ngày (kể cả hàng rào, dù rào không có art đêm riêng,
+    giữ cho đồng nhất cấu trúc). Cả 2 file xuất CÙNG TÊN biến (`HOUSE_PLACEMENT`, `WELL_PLACEMENT`,
+    `FENCE_PLACEMENTS`, `FARM_BUILDING_PLACEMENTS`) — phân biệt ngày/đêm bằng chính tên file lúc import, ví dụ
+    `import { HOUSE_PLACEMENT as HOUSE_PLACEMENT_DAY } from '../data/mapPlacementsDay'` (xem cách
+    `GameScene.ts` import cả 2 file cùng lúc).
+  - **Đã XOÁ hẳn** `src/data/fencePlacements.ts` và `src/data/farmBuildingPlacements.ts` (nội dung chuyển hết
+    sang 2 file trên). `housePlacement.ts`/`wellPlacement.ts` RÚT GỌN chỉ còn giữ cấu hình KHÔNG PHẢI vị trí
+    (texture theo cấp nhà, `HOUSE_LEVEL_DISPLAY_SIZE`, `WELL_CANVAS_SIZE`, `WELL_AUTO_WATER_RADIUS`).
+  - Cập nhật toàn bộ nơi dùng: `GameScene.ts` (import cả 2 file, alias `_DAY`/`_NIGHT`), `WorldDecorations.ts`
+    (dùng bản NGÀY, vì `EditorScene` chỉ có ngữ cảnh nền ngày), `BuildingEditorScene.ts` (import cả 2 file,
+    hàm xuất `showExport()` viết lại theo cấu trúc mới — xuất `HOUSE_PLACEMENT.x/y/bottomY`,
+    `WELL_PLACEMENT.x/y/bottomY`, và mảng `FARM_BUILDING_PLACEMENTS` đầy đủ cho cả 2 bản).
+  - Đã verify bằng `tsc --noEmit` (sạch) + Puppeteer: GameScene render đúng nhà/giếng/hàng rào/6 công trình,
+    nhảy đồng hồ tới 18h vẫn đồng bộ đúng cả 9 cặp ngày/đêm; vào `BuildingEditorScene` (phím P) vẫn thấy đủ 8
+    công trình kéo được, bấm N vẫn đổi đúng bản ngày/đêm (kể cả hàng rào hiện qua context tĩnh).
+- **Cập nhật ngay sau đó — gộp luôn Nhà chính + Giếng nước THẲNG vào mảng `FARM_BUILDING_PLACEMENTS`**: user chỉ
+  ra 2 cái đó cũng là "cơ quan của map" như 6 công trình kia, không cần giữ `HOUSE_PLACEMENT`/`WELL_PLACEMENT`
+  tách riêng — trường nào chỉ 1 loại mới có (`level`, chỉ Nhà chính) thì để optional.
+  - `FarmBuildingPlacement` thêm `level?: HouseLevel`. Xoá hẳn `HousePlacementEntry`/`WellPlacementEntry`, xoá
+    `HOUSE_PLACEMENT`/`WELL_PLACEMENT` — Nhà chính (`id: 'nha_chinh'`, có `level: 1`) và Giếng nước
+    (`id: 'gieng_nuoc'`, không có `level`) giờ là 2 phần tử ĐẦU trong `FARM_BUILDING_PLACEMENTS`.
+  - `GameScene.ts`: `PLAYER_HOUSE_DAY`/`_NIGHT`/`WELL_PLACEMENT_DAY`/`_NIGHT` giờ là `.find(id)` từ mảng gộp
+    (module-level, tính 1 lần) — `placeHouse()`/`placeWell()`/`findInteractionTarget()`/`autoWaterNearWell()`
+    KHÔNG cần đổi gì thêm nhờ vậy. **Bug thật gặp khi verify bằng Puppeteer**: `placeFarmBuildings()` (vòng lặp
+    cho "6 công trình mới") LẶP QUA CẢ `'nha_chinh'`/`'gieng_nuoc'` (giờ nằm chung mảng) — vẽ chồng thêm 1 lớp
+    bright/night TRÙNG KHÍT lên đúng chỗ `placeHouse()`/`placeWell()` đã vẽ (`dayNightPairs.length` dư ra đúng
+    2, từ 9 thành 11). **Sửa**: `placeFarmBuildings()` bỏ qua 2 id đó (`continue`) vì đã có hàm riêng vẽ (nhà
+    cần chọn texture theo cấp, giếng cần bóng đổ dưới đất — khác hẳn 6 công trình còn lại).
+  - `BuildingEditorScene.ts`: gộp `createBuilding()` house/well riêng + vòng lặp 6 công trình thành ĐÚNG 1 vòng
+    lặp cho cả 8 (đơn giản hơn hẳn bản trước). Tách logic chọn texture (bright/night, có xử lý fallback cấp
+    2/3 của Nhà chính) thành 2 hàm nhỏ `brightTexture()`/`nightTexture()` dùng chung cho mọi loại. `showExport()`
+    giờ chỉ xuất ĐÚNG 1 mảng `FARM_BUILDING_PLACEMENTS` cho mỗi bản ngày/đêm (trước đó phải xuất riêng 3 khối).
+  - Đã verify bằng Puppeteer: `dayNightPairs.length` đúng lại 9 (không còn dư), ảnh nhà/giếng không còn chồng
+    lớp; editor hiện đủ 8 công trình kéo được, xuất dữ liệu đúng (Nhà chính có `level: 1`, còn lại không có).
+- **Cập nhật ngay sau đó — chuyển `mapPlacementsDay.ts`/`mapPlacementsNight.ts` vào thư mục riêng cho dễ nhận
+  biết**: `src/data/mapPlacements/day.ts` + `src/data/mapPlacements/night.ts` (đổi luôn tên file, bỏ tiền tố
+  `mapPlacements` lặp lại vì tên thư mục đã nói rõ rồi). Cập nhật toàn bộ nơi import (`GameScene.ts`,
+  `BuildingEditorScene.ts`, `WorldDecorations.ts`, import nội bộ giữa `day.ts`/`night.ts`) + mọi comment tham
+  chiếu tên file cũ (`housePlacement.ts`, `wellPlacement.ts`, `PreloadScene.ts`). Đã verify bằng `tsc --noEmit`
+  (sạch) + Puppeteer: GameScene/BuildingEditorScene vẫn hoạt động đúng sau khi đổi đường dẫn.
+
 ## Sprint 13+ — chưa bắt đầu (Phase 2 — Beta)
 
 Xem chi tiết từng sprint ở [dev-schedule.md](dev-schedule.md) Phụ lục C.

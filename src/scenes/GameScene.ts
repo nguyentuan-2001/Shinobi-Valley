@@ -2,11 +2,28 @@ import Phaser from 'phaser'
 import { Player } from '../entities/Player'
 import { FARM_COLLISION_ZONES } from '../data/collisionZones'
 import { FARM_TILE_PLACEMENTS, type FarmTileType } from '../data/farmTiles'
-import { FENCE_PLACEMENTS } from '../data/fencePlacements'
-import { PLAYER_HOUSE, HOUSE_LEVEL_TEXTURES } from '../data/housePlacement'
-import { WELL_PLACEMENT, WELL_AUTO_WATER_RADIUS } from '../data/wellPlacement'
+import {
+  FENCE_PLACEMENTS,
+  FARM_BUILDING_PLACEMENTS as FARM_BUILDING_PLACEMENTS_DAY
+} from '../data/mapPlacements/day'
+import { FARM_BUILDING_PLACEMENTS as FARM_BUILDING_PLACEMENTS_NIGHT } from '../data/mapPlacements/night'
+import {
+  HOUSE_LEVEL_TEXTURES,
+  HOUSE_LEVEL_NIGHT_TEXTURES,
+  HOUSE_LEVEL_DISPLAY_SIZE,
+  type HouseLevel
+} from '../data/housePlacement'
+import { WELL_CANVAS_SIZE, WELL_AUTO_WATER_RADIUS } from '../data/wellPlacement'
 import { FarmManager, type CropVisualStage, type FarmTileRuntime } from '../systems/FarmManager'
 import { TimeManager } from '../systems/TimeManager'
+
+// Nhà chính/Giếng nước giờ sống chung trong FARM_BUILDING_PLACEMENTS_DAY/_NIGHT (id 'nha_chinh'/'gieng_nuoc')
+// thay vì 2 export riêng — tìm lại đúng entry 1 lần ở module scope để phần code dùng bên dưới (placeHouse/
+// placeWell/findInteractionTarget/autoWaterNearWell) không phải đổi gì thêm.
+const PLAYER_HOUSE_DAY = FARM_BUILDING_PLACEMENTS_DAY.find((b) => b.id === 'nha_chinh')!
+const PLAYER_HOUSE_NIGHT = FARM_BUILDING_PLACEMENTS_NIGHT.find((b) => b.id === 'nha_chinh')!
+const WELL_PLACEMENT_DAY = FARM_BUILDING_PLACEMENTS_DAY.find((b) => b.id === 'gieng_nuoc')!
+const WELL_PLACEMENT_NIGHT = FARM_BUILDING_PLACEMENTS_NIGHT.find((b) => b.id === 'gieng_nuoc')!
 import { inventoryManager } from '../systems/InventoryManager'
 import { resolvePolygonCollision } from '../systems/CollisionUtils'
 import { GameData } from '../data/DataLoader'
@@ -66,7 +83,6 @@ const BULK_ACTIONS_DEPTH = SEED_MENU_DEPTH + 1
 const MOISTURE_OVERLAY_DEPTH = FARM_TILE_DEPTH + 0.1
 const MOISTURE_OVERLAY_TEXTURE = 'moisture_overlay'
 const WATER_FX_TEXTURE = 'water_droplet_fx'
-const WELL_TEXTURE = 'farm_well'
 const ROAST_CHICKEN_TEXTURE = 'roast_chicken'
 const ANIMAL_TEXTURE_PREFIX = 'animal_sprite_'
 /** Bán kính (world-px) tính là "đứng đủ gần để cho ăn/thu hoạch" 1 chỗ nuôi — cùng tinh thần
@@ -234,6 +250,19 @@ export class GameScene extends Phaser.Scene {
   /** Ảnh nền ban đêm (cùng bố cục/kích thước ảnh nền ngày), đặt chồng lên trên — CHUYỂN HẲN alpha 0/1 theo
    * `TimeManager.getIsNight()` (18h/6h), không còn crossfade dần, xem `updateDayNightVisuals()`. */
   private backgroundNight!: Phaser.GameObjects.Image
+  /** Mọi cặp ảnh "bản ngày"/"bản đêm" (nền map, nhà chính, giếng nước, 6 công trình mới ở
+   * `data/mapPlacements/day.ts`/`mapPlacements/night.ts`) gom vào ĐÚNG 1 mảng, toggle alpha CÙNG 1 chỗ trong
+   * `updateDayNightVisuals()`
+   * — đảm bảo chuyển ngày/đêm của mọi công trình luôn đồng bộ tuyệt đối với nền map (cùng 1 lần gọi
+   * `setAlpha()` trong cùng 1 frame). LOẠI TRỪ LẪN NHAU (`day` alpha 1↔0 ngược với `night`) chứ không phải
+   * "ngày luôn hiện, đêm chồng lên" — bản trước để `day` alpha=1 cố định, gây lỗi thật: 2 ảnh bright/night của
+   * công trình có viền/glow hơi khác nhau (không khít pixel-for-pixel như nền map — nền map là hình chữ nhật
+   * đặc kín cả 2 bản nên không lộ, còn công trình có viền trong suốt/glow mềm), nên ban đêm vẫn LỘ RA viền
+   * sáng của bản ngày quanh công trình dù bản đêm đã alpha=1 đè lên (user báo "đang ban đêm mà hiện cả frame
+   * ban ngày", có ảnh chụp glow xanh lá quanh nhà lúc trời tối). Chuyển hẳn sang loại trừ để CHỈ 1 bản hiện tại
+   * 1 thời điểm, không còn chồng 2 lớp bao giờ. */
+  private dayNightPairs: Array<{ day: Phaser.GameObjects.Image; night: Phaser.GameObjects.Image }> =
+    []
   /** Menu chọn hạt giống (mở khi Enter lên ô đã cuốc) — xem `openSeedMenu()`/`confirmSeedMenu()`. Player đứng
    * yên trong lúc menu mở (xem `update()`), điều hướng bằng ←/→, Enter xác nhận trồng, Esc huỷ. */
   private seedMenuOpen = false
@@ -344,6 +373,7 @@ export class GameScene extends Phaser.Scene {
       .setOrigin(0, 0)
       .setDepth(GROUND_DEPTH + 1)
       .setAlpha(0)
+    this.dayNightPairs = [{ day: background, night: this.backgroundNight }]
 
     // Mặc định physics world bounds lấy theo kích thước game config chứ không tự khớp theo ảnh nền — nếu không
     // set lại, player sẽ bị chặn cứng ở góc trên-trái map dù ảnh nền thật lớn hơn nhiều, khiến va chạm sông/ao
@@ -387,8 +417,8 @@ export class GameScene extends Phaser.Scene {
     this.createBulkActionsUI()
     this.placeFence()
     this.placeHouse()
-    this.createWellTexture()
     this.placeWell()
+    this.placeFarmBuildings()
     this.placeRoastChicken()
     // Cổng dịch chuyển sang Bãi Tập Luyện/Đồng Cỏ (Sprint 5) — vẽ cổng cho MỌI Exit Zone của Farm tự động,
     // không hardcode riêng từng cổng (thêm map chiến đấu mới sau này chỉ cần thêm 1 phần tử vào
@@ -459,6 +489,15 @@ export class GameScene extends Phaser.Scene {
       event.preventDefault()
       this.scene.stop('UIScene')
       this.scene.start('EditorScene')
+    })
+
+    // P mở công cụ kéo-thả đặt vị trí công trình nông trại (BuildingEditorScene) — cùng logic với Q ở trên,
+    // xem src/scenes/BuildingEditorScene.ts
+    this.input.keyboard!.on('keydown-P', (event: KeyboardEvent) => {
+      if (event.repeat) return
+      event.preventDefault()
+      this.scene.stop('UIScene')
+      this.scene.start('BuildingEditorScene')
     })
 
     // Enter: cuốc đất (empty->tilled) HOẶC mở/xác nhận menu chọn hạt giống — 1 phím, 3 nấc tuỳ trạng thái ô:
@@ -658,9 +697,17 @@ export class GameScene extends Phaser.Scene {
    * "sắc độ ảnh nền vẫn nhợt nhạt" sau khi đã xoá ICC profile (đợt sửa trước): hoá ra vẫn còn lớp phủ đen mờ này
    * đè thêm lên toàn cảnh mỗi đêm, làm nhạt màu tiếp dù ảnh nền tự nó đã đủ tối/đúng tông đêm rồi — thừa và phản
    * tác dụng. Player/prop giờ không còn được tối thêm riêng lúc đêm nữa (chấp nhận được, ưu tiên giữ đúng màu
-   * nền theo yêu cầu). */
+   * nền theo yêu cầu).
+   * User yêu cầu thêm: nhà/giếng/công trình mới phải đổi bản ngày/đêm CÙNG LÚC với nền map — dùng chung ĐÚNG 1
+   * vòng lặp `dayNightPairs` (thay vì mỗi công trình tự set alpha riêng ở chỗ khác) để không có công trình nào
+   * lệch nhịp dù chỉ 1 frame. `day`/`night` LOẠI TRỪ LẪN NHAU (không phải "ngày luôn hiện") — xem comment ở
+   * field `dayNightPairs` lý do vì sao (viền/glow 2 bản không khít pixel-for-pixel gây lộ bản ngày lúc đêm). */
   private updateDayNightVisuals() {
-    this.backgroundNight.setAlpha(this.timeManager.getIsNight() ? 1 : 0)
+    const isNight = this.timeManager.getIsNight()
+    for (const pair of this.dayNightPairs) {
+      pair.day.setAlpha(isNight ? 0 : 1)
+      pair.night.setAlpha(isNight ? 1 : 0)
+    }
   }
 
   /** Ghi ngày/giờ hiện tại vào registry cho UIScene đọc — xem cách làm tương tự ở `selectSeed()`. */
@@ -732,11 +779,11 @@ export class GameScene extends Phaser.Scene {
     const tile = this.resolveFarmTileTarget(feetX, feetY)
     if (tile) return { x: tile.x, y: tile.y - tile.height / 2 }
 
-    const houseRadius = PLAYER_HOUSE.width * 0.7
-    if (
-      Phaser.Math.Distance.Between(feetX, feetY, PLAYER_HOUSE.x, PLAYER_HOUSE.bottomY) < houseRadius
-    ) {
-      return { x: PLAYER_HOUSE.x, y: PLAYER_HOUSE.y - PLAYER_HOUSE.height / 2 }
+    // Nhà đổi vị trí theo ngày/đêm (xem `housePlacement.ts`) — dùng đúng bản đang hiện để con trỏ trỏ khớp chỗ.
+    const house = this.timeManager.getIsNight() ? PLAYER_HOUSE_NIGHT : PLAYER_HOUSE_DAY
+    const houseRadius = house.width * 0.7
+    if (Phaser.Math.Distance.Between(feetX, feetY, house.x, house.bottomY) < houseRadius) {
+      return { x: house.x, y: house.y - house.height / 2 }
     }
 
     return null
@@ -1343,9 +1390,11 @@ export class GameScene extends Phaser.Scene {
   }
 
   /** Đặt hàng rào gỗ bao quanh khu đất (4 trụ góc + 2 đoạn ngang trên/dưới + 2 đoạn dọc trái/phải), toạ độ tính
-   * sẵn trong `data/fencePlacements.ts`. Depth theo `bottomY` (điểm thấp nhất của mảnh hàng rào) để Y-sort đúng
-   * với player.y — đứng trên cạnh trên thì bị hàng rào che, đứng dưới cạnh dưới thì che hàng rào. Chỉ trang trí,
-   * chưa có va chạm (collisionZones.ts đang do người chơi tự chỉnh tay qua EditorScene). */
+   * sẵn trong `data/mapPlacements/day.ts` (`FENCE_PLACEMENTS` — không có bản đêm riêng vì hàng rào không có art
+   * đêm, dùng chung 1 vị trí/texture cho mọi khung giờ). Depth theo `bottomY` (điểm thấp nhất của mảnh hàng
+   * rào) để Y-sort đúng với player.y — đứng trên cạnh trên thì bị hàng rào che, đứng dưới cạnh dưới thì che
+   * hàng rào. Chỉ trang trí, chưa có va chạm (collisionZones.ts đang do người chơi tự chỉnh tay qua
+   * EditorScene). */
   private placeFence() {
     for (const fence of FENCE_PLACEMENTS) {
       this.addGroundShadow(fence.x, fence.bottomY, fence.width * 0.85, fence.bottomY - 0.5)
@@ -1358,40 +1407,96 @@ export class GameScene extends Phaser.Scene {
 
   /** Đặt nhà chính người chơi (hiện chỉ cấp 1) lên khoảnh cỏ trống cạnh cụm ô đất, toạ độ tính sẵn trong
    * `data/housePlacement.ts`. Depth theo `bottomY` (đáy nhà) để Y-sort đúng với player.y, giống cách làm với
-   * hàng rào ở `placeFence()`. Không vẽ bóng đổ (user yêu cầu bỏ) — khác hàng rào/giếng vẫn còn giữ. */
+   * hàng rào ở `placeFence()`. Không vẽ bóng đổ (user yêu cầu bỏ) — khác hàng rào/giếng vẫn còn giữ.
+   * Cấp 1 có bản đêm thật (`HOUSE_LEVEL_NIGHT_TEXTURES`) — bản ngày đặt tại `PLAYER_HOUSE_DAY`, bản đêm đặt
+   * tại `PLAYER_HOUSE_NIGHT` (2 vị trí TÁCH RIÊNG, xem lý do ở `housePlacement.ts`) — đẩy vào `dayNightPairs`
+   * để đổi CÙNG LÚC với nền map. Cấp 2/3 chưa có bản đêm — không tạo layer đêm cho chúng, giữ nguyên art ngày
+   * cả lúc trời tối (chấp nhận được, xem `housePlacement.ts`). */
   private placeHouse() {
-    const texture = HOUSE_LEVEL_TEXTURES[PLAYER_HOUSE.level]
+    // `level` optional trên FarmBuildingPlacement (chỉ Nhà chính mới có, xem mapPlacements/day.ts) — luôn có
+    // giá trị thật ở đúng entry này, mặc định 1 chỉ để thoả kiểu.
+    const level: HouseLevel = PLAYER_HOUSE_DAY.level ?? 1
+    const texture = HOUSE_LEVEL_TEXTURES[level]
+    const nightTexture = HOUSE_LEVEL_NIGHT_TEXTURES[level]
+    const displaySize = HOUSE_LEVEL_DISPLAY_SIZE[level]
 
-    this.add
-      .image(PLAYER_HOUSE.x, PLAYER_HOUSE.y, texture)
-      .setDisplaySize(PLAYER_HOUSE.width, PLAYER_HOUSE.height)
-      .setDepth(PLAYER_HOUSE.bottomY)
+    const day = this.add
+      .image(PLAYER_HOUSE_DAY.x, PLAYER_HOUSE_DAY.y, texture)
+      .setDisplaySize(displaySize.width, displaySize.height)
+      .setDepth(PLAYER_HOUSE_DAY.bottomY)
+
+    if (nightTexture) {
+      // Depth +0.01 so với bản ngày (không dùng đúng bằng `bottomY`) — thứ tự vẽ khi CẢ 2 cùng alpha>0 (không
+      // nên xảy ra vì loại trừ lẫn nhau, nhưng phòng hờ frame chuyển tiếp) không thể trông chờ vào thứ tự
+      // `this.add.image()` (dễ vỡ nếu ai đó đổi thứ tự gọi hàm sau này). Cùng cách background đã dùng
+      // (`GROUND_DEPTH + 1`).
+      const night = this.add
+        .image(PLAYER_HOUSE_NIGHT.x, PLAYER_HOUSE_NIGHT.y, nightTexture)
+        .setDisplaySize(displaySize.width, displaySize.height)
+        .setDepth(PLAYER_HOUSE_NIGHT.bottomY + 0.01)
+        .setAlpha(0)
+      this.dayNightPairs.push({ day, night })
+    }
   }
 
   /** Đặt giếng nước lên khoảnh cỏ mở sát cụm ô đất dưới, toạ độ tính sẵn trong `data/wellPlacement.ts` — công
    * trình thuần tự động (không có tương tác Enter thủ công, xem `autoWaterNearWell()`), khác nhà/hàng rào chỉ
-   * mang tính trang trí + Y-sort. */
+   * mang tính trang trí + Y-sort. Bản ngày đặt tại `WELL_PLACEMENT_DAY`, bản đêm tại `WELL_PLACEMENT_NIGHT` (2
+   * vị trí TÁCH RIÊNG), cùng cách ghép cặp bright/night + đẩy vào `dayNightPairs` như `placeHouse()`. Bóng đổ
+   * dưới đất vẽ theo vị trí NGÀY (bản đêm không có bóng riêng — chấp nhận được vì 2 vị trí chỉ lệch vài chục px). */
   private placeWell() {
     this.addGroundShadow(
-      WELL_PLACEMENT.x,
-      WELL_PLACEMENT.bottomY,
-      WELL_PLACEMENT.width * 0.9,
-      WELL_PLACEMENT.bottomY - 0.5
+      WELL_PLACEMENT_DAY.x,
+      WELL_PLACEMENT_DAY.bottomY,
+      WELL_PLACEMENT_DAY.width * 0.9,
+      WELL_PLACEMENT_DAY.bottomY - 0.5
     )
-    this.add
-      .image(WELL_PLACEMENT.x, WELL_PLACEMENT.y, WELL_TEXTURE)
-      .setDisplaySize(WELL_PLACEMENT.width, WELL_PLACEMENT.height)
-      .setDepth(WELL_PLACEMENT.bottomY)
+    const day = this.add
+      .image(WELL_PLACEMENT_DAY.x, WELL_PLACEMENT_DAY.y, 'building_gieng_nuoc_bright')
+      .setDisplaySize(WELL_CANVAS_SIZE, WELL_CANVAS_SIZE)
+      .setDepth(WELL_PLACEMENT_DAY.bottomY)
+    const night = this.add
+      .image(WELL_PLACEMENT_NIGHT.x, WELL_PLACEMENT_NIGHT.y, 'building_gieng_nuoc_night')
+      .setDisplaySize(WELL_CANVAS_SIZE, WELL_CANVAS_SIZE)
+      .setDepth(WELL_PLACEMENT_NIGHT.bottomY + 0.01)
+      .setAlpha(0)
+    this.dayNightPairs.push({ day, night })
+  }
+
+  /** Đặt 6 công trình mới (`data/mapPlacements/day.ts`) — thuần trang trí, chưa có tương tác/shop thật
+   * (xem comment đầu file data). Bản ngày đọc từ `FARM_BUILDING_PLACEMENTS_DAY`, bản đêm từ `_NIGHT` (khớp
+   * theo `id`, 2 mảng TÁCH RIÊNG vị trí) — cùng 1 công thức bright/night + Y-sort + `dayNightPairs` như
+   * `placeHouse()`/`placeWell()`, lặp qua mảng thay vì viết tay từng cái vì cả 6 đều giống hệt nhau về logic.
+   * BỎ QUA `'nha_chinh'`/`'gieng_nuoc'` dù chúng cũng nằm trong cùng mảng (gộp chung theo yêu cầu user) — 2 cái
+   * đó đã được `placeHouse()`/`placeWell()` vẽ riêng (logic khác: nhà cần chọn texture theo `level`, giếng cần
+   * bóng đổ dưới đất) — lặp lại ở đây sẽ tạo ra ẢNH TRÙNG (2 lớp bright/night chồng khít lên nhau y hệt, bug
+   * thật gặp khi verify bằng Puppeteer — `dayNightPairs.length` dư đúng 2 so với kỳ vọng). */
+  private placeFarmBuildings() {
+    for (const day of FARM_BUILDING_PLACEMENTS_DAY) {
+      if (day.id === 'nha_chinh' || day.id === 'gieng_nuoc') continue
+      const night = FARM_BUILDING_PLACEMENTS_NIGHT.find((n) => n.id === day.id) ?? day
+      const dayImage = this.add
+        .image(day.x, day.y, `building_${day.id}_bright`)
+        .setDisplaySize(day.canvasSize, day.canvasSize)
+        .setDepth(day.bottomY)
+      const nightImage = this.add
+        .image(night.x, night.y, `building_${day.id}_night`)
+        .setDisplaySize(night.canvasSize, night.canvasSize)
+        .setDepth(night.bottomY + 0.01)
+        .setAlpha(0)
+      this.dayNightPairs.push({ day: dayImage, night: nightImage })
+    }
   }
 
   /** Gọi mỗi khi `TimeManager` báo sang buổi sáng (`dayStart`) — tưới về 100% mọi ô đang có cây (`planted`)
    * nằm trong `WELL_AUTO_WATER_RADIUS` tính từ tâm giếng, đúng hiệu ứng "Tự động tưới 3×3 ô xung quanh mỗi
    * sáng" trong `docs/gameplay/farming.md`. Dùng lại đúng `FarmManager.water()` (chỉ có tác dụng lên ô
    * `planted`, tự bỏ qua ô trống/đã chín) nên không cần tự kiểm tra state ở đây — phát `playWaterFx()` cho
-   * từng ô thực sự được tưới để người chơi thấy rõ giếng vừa hoạt động. */
+   * từng ô thực sự được tưới để người chơi thấy rõ giếng vừa hoạt động. Cố định dùng `WELL_PLACEMENT_DAY` làm
+   * mốc (gameplay, không phải hiển thị) — xem giải thích ở `wellPlacement.ts`. */
   private autoWaterNearWell() {
     for (const tile of this.farmManager.getTiles()) {
-      const distance = Math.hypot(tile.x - WELL_PLACEMENT.x, tile.y - WELL_PLACEMENT.y)
+      const distance = Math.hypot(tile.x - WELL_PLACEMENT_DAY.x, tile.y - WELL_PLACEMENT_DAY.y)
       if (distance > WELL_AUTO_WATER_RADIUS) continue
       if (this.farmManager.water(tile)) this.playWaterFx(tile.x, tile.y)
     }
@@ -1945,50 +2050,6 @@ export class GameScene extends Phaser.Scene {
     ctx.fill()
     canvasTexture.refresh()
     this.textures.get(WATER_FX_TEXTURE).setFilter(Phaser.Textures.FilterMode.LINEAR)
-  }
-
-  /** Giếng nước tạm (vẽ bằng code, không cần asset riêng) — vòng đá xám tròn + mặt nước xanh bên trong, mái gỗ
-   * nhỏ phía trên. Thay bằng sprite thật khi có, xem `art-refs/world/buildings.md` mục "Hồ Chứa Nước / Giếng
-   * Làng" (đã có prompt sẵn, chưa gen ảnh). */
-
-  private createWellTexture() {
-    if (this.textures.exists(WELL_TEXTURE)) return
-    const size = 40
-    const canvasTexture = this.textures.createCanvas(WELL_TEXTURE, size, size)
-    if (!canvasTexture) return
-    const ctx = canvasTexture.getContext()
-    const cx = size / 2
-    const cy = size / 2 + 4
-
-    // Vòng đá xám bao ngoài.
-    ctx.beginPath()
-    ctx.arc(cx, cy, 15, 0, Math.PI * 2)
-    ctx.fillStyle = '#8a8f96'
-    ctx.fill()
-    ctx.lineWidth = 2
-    ctx.strokeStyle = '#5c666c' // Rock Shadow, art-refs/theme.md
-    ctx.stroke()
-
-    // Mặt nước xanh bên trong.
-    ctx.beginPath()
-    ctx.arc(cx, cy, 10, 0, Math.PI * 2)
-    ctx.fillStyle = '#4aa9f0' // River Base, art-refs/theme.md
-    ctx.fill()
-
-    // Mái gỗ nhỏ phía trên (hình tam giác dẹt) + 2 cột đỡ, gợi ý giếng có mái che.
-    ctx.beginPath()
-    ctx.moveTo(cx - 16, cy - 14)
-    ctx.lineTo(cx + 16, cy - 14)
-    ctx.lineTo(cx, cy - 24)
-    ctx.closePath()
-    ctx.fillStyle = '#9c6a3a' // Wood Base, art-refs/theme.md
-    ctx.fill()
-    ctx.fillStyle = '#714a28' // Wood Shadow
-    ctx.fillRect(cx - 14, cy - 15, 3, 8)
-    ctx.fillRect(cx + 11, cy - 15, 3, 8)
-
-    canvasTexture.refresh()
-    this.textures.get(WELL_TEXTURE).setFilter(Phaser.Textures.FilterMode.LINEAR)
   }
 
   /** Gà Quay tạm (vẽ bằng code, không cần asset riêng) — thân bầu dục nâu vàng cắm que xiên, 2 đùi gà nhô ra 2

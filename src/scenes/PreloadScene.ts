@@ -110,16 +110,33 @@ export class PreloadScene extends Phaser.Scene {
       this.load.image(`crop_${cropId}_item`, `/assets/sprites/crops/${cropId}.png`)
     }
 
-    // Hàng rào gỗ bao quanh khu đất — xem vị trí đặt ở data/fencePlacements.ts.
+    // Hàng rào gỗ bao quanh khu đất — xem vị trí đặt ở data/mapPlacements/day.ts (FENCE_PLACEMENTS).
     this.load.image('fence_horizontal', '/assets/tilesets/farm/fence_horizontal.png')
     this.load.image('fence_vertical', '/assets/tilesets/farm/fence_vertical.png')
 
     // Nhà chính người chơi, 3 cấp độ (xem art-refs/world/buildings.md + docs/gameplay/economy.md). Chỉ cấp 1
-    // được đặt lên map ngay từ đầu (data/housePlacement.ts) — cấp 2/3 preload sẵn, hiển thị sau khi có logic
+    // được đặt lên map ngay từ đầu (data/mapPlacements/day.ts) — cấp 2/3 preload sẵn, hiển thị sau khi có logic
     // nâng cấp nhà (đổi texture theo level khi trả tiền), tương tự cách `tilled` farm tile đang chờ Sprint 2.
     this.load.image('player_house_1', '/assets/sprites/buildings/player_house_1.png')
     this.load.image('player_house_2', '/assets/sprites/buildings/player_house_2.png')
     this.load.image('player_house_3', '/assets/sprites/buildings/player_house_3.png')
+
+    // 8 công trình nông trại bản ngày/đêm (user tự tách sẵn 2 thư mục `bright`/`night`, xem
+    // `data/mapPlacements/day.ts`/`night.ts`) — mỗi công trình 1 cặp texture, đổi alpha đồng bộ với ảnh nền
+    // qua `GameScene.dayNightPairs` (xem `updateDayNightVisuals()`).
+    for (const name of [
+      'cua_hang_hat_giong',
+      'cua_hang_tong_hop',
+      'gieng_nuoc',
+      'kho_chua',
+      'lo_ren',
+      'nha_chinh',
+      'nha_gia_kim',
+      'quay_thu_mua'
+    ]) {
+      this.load.image(`building_${name}_bright`, `/assets/sprites/buildings/bright/${name}.png`)
+      this.load.image(`building_${name}_night`, `/assets/sprites/buildings/night/${name}.png`)
+    }
 
     // Kích thước frame khác nhau theo giới tính/hành động vì asset gen ở nhiều đợt khác nhau
     // (men còn bộ cũ 3-4 frame 164x213, women đã có bộ mới 8 frame cho toàn bộ hành động — xem asset-manifest.md).

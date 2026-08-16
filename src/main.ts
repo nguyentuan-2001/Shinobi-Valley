@@ -11,6 +11,7 @@ import { RungThiengScene } from './scenes/RungThiengScene'
 import { RungCoScene } from './scenes/RungCoScene'
 import { VillageScene } from './scenes/VillageScene'
 import { EditorScene } from './scenes/EditorScene'
+import { BuildingEditorScene } from './scenes/BuildingEditorScene'
 import { UIScene } from './scenes/UIScene'
 import { combatManager } from './systems/CombatManager'
 import { inventoryManager } from './systems/InventoryManager'
@@ -51,7 +52,8 @@ const config: Phaser.Types.Core.GameConfig = {
     RungCoScene,
     VillageScene,
     UIScene,
-    EditorScene
+    EditorScene,
+    BuildingEditorScene
   ]
 }
 

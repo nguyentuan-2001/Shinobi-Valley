@@ -1,7 +1,11 @@
 import Phaser from 'phaser'
 import { FARM_TILE_PLACEMENTS } from '../data/farmTiles'
-import { FENCE_PLACEMENTS } from '../data/fencePlacements'
-import { PLAYER_HOUSE, HOUSE_LEVEL_TEXTURES } from '../data/housePlacement'
+import { FARM_BUILDING_PLACEMENTS, FENCE_PLACEMENTS } from '../data/mapPlacements/day'
+import { HOUSE_LEVEL_TEXTURES, type HouseLevel } from '../data/housePlacement'
+
+// Nhà chính sống chung trong FARM_BUILDING_PLACEMENTS (id 'nha_chinh') — tìm lại đúng entry, luôn dùng bản
+// NGÀY vì EditorScene chỉ vẽ ngữ cảnh nền ngày, không có chế độ đêm riêng.
+const PLAYER_HOUSE_DAY = FARM_BUILDING_PLACEMENTS.find((b) => b.id === 'nha_chinh')!
 
 const FARM_TILE_DEPTH = -1
 /** Texture bóng đổ dùng chung — do `GameScene.createShadowTexture()` tạo, luôn chạy trước vì EditorScene chỉ
@@ -16,7 +20,10 @@ const SHADOW_TEXTURE = 'shadow_oval'
  * `GameScene`). Cố tình KHÔNG dùng chung code với `GameScene.placeFarmTiles/placeFence/placeHouse` — những hàm
  * đó đã verify kỹ và gắn chặt vào state riêng của `GameScene` (soilImages map, Y-sort...), tách riêng bản tĩnh
  * ở đây để không rủi ro đụng vỡ code đã chạy đúng bên đó. */
-export function renderStaticWorldDecorations(scene: Phaser.Scene): void {
+export function renderStaticWorldDecorations(
+  scene: Phaser.Scene,
+  options?: { skipHouse?: boolean }
+): void {
   for (const tile of FARM_TILE_PLACEMENTS) {
     const textureKey = tile.type === 'water_pot' ? 'farm_soil_water_pot' : 'farm_soil_untilled'
     scene.add
@@ -33,18 +40,23 @@ export function renderStaticWorldDecorations(scene: Phaser.Scene): void {
       .setDepth(fence.bottomY)
   }
 
-  const houseTexture = HOUSE_LEVEL_TEXTURES[PLAYER_HOUSE.level]
+  // `BuildingEditorScene` (phím P) tự vẽ nhà chính THÀNH 1 sprite kéo-thả riêng (đè lên nếu vẽ lại ở đây) — cho
+  // `skipHouse: true` để bỏ qua bước vẽ tĩnh này, tránh 2 ảnh nhà chồng lên nhau.
+  if (options?.skipHouse) return
+
+  const level: HouseLevel = PLAYER_HOUSE_DAY.level ?? 1
+  const houseTexture = HOUSE_LEVEL_TEXTURES[level]
   renderGroundShadow(
     scene,
-    PLAYER_HOUSE.x,
-    PLAYER_HOUSE.bottomY,
-    PLAYER_HOUSE.width * 0.95,
-    PLAYER_HOUSE.bottomY - 0.5
+    PLAYER_HOUSE_DAY.x,
+    PLAYER_HOUSE_DAY.bottomY,
+    PLAYER_HOUSE_DAY.width * 0.95,
+    PLAYER_HOUSE_DAY.bottomY - 0.5
   )
   scene.add
-    .image(PLAYER_HOUSE.x, PLAYER_HOUSE.y, houseTexture)
-    .setDisplaySize(PLAYER_HOUSE.width, PLAYER_HOUSE.height)
-    .setDepth(PLAYER_HOUSE.bottomY)
+    .image(PLAYER_HOUSE_DAY.x, PLAYER_HOUSE_DAY.y, houseTexture)
+    .setDisplaySize(PLAYER_HOUSE_DAY.width, PLAYER_HOUSE_DAY.height)
+    .setDepth(PLAYER_HOUSE_DAY.bottomY)
 }
 
 function renderGroundShadow(

@@ -20,6 +20,7 @@ export const FARM_CONTROLS: ControlEntry[] = [
   { key: 'Esc', action: 'Đóng menu/bảng đang mở, huỷ câu cá' },
   { key: 'Z', action: 'Hiện/ẩn bảng phím tắt này' },
   { key: 'Q', action: '[Debug] Mở Editor vùng va chạm' },
+  { key: 'P', action: '[Debug] Mở Editor kéo-thả vị trí công trình' },
   { key: 'G', action: '[Debug] +1 giờ cây trồng' },
   { key: 'T', action: '[Debug] +1 giờ đồng hồ game' },
   { key: 'N', action: '[Debug] Nuôi thử 1 con vật ngẫu nhiên' }
