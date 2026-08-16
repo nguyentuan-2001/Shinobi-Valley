@@ -230,11 +230,8 @@ export class GameScene extends Phaser.Scene {
     sweetWidth: number
     barWidth: number
   }
-  /** Lớp phủ tối ban đêm — hình chữ nhật cố định theo camera (`setScrollFactor(0)`), chỉ đổi alpha, không phải
-   * world object nên không cần theo dõi vị trí camera thủ công. */
-  private nightOverlay!: Phaser.GameObjects.Rectangle
-  /** Ảnh nền ban đêm (cùng bố cục/kích thước ảnh nền ngày), đặt chồng lên trên — hiện dần bằng alpha theo
-   * `TimeManager.getNightFraction()` thay vì bật/tắt đột ngột, xem `updateDayNightVisuals()`. */
+  /** Ảnh nền ban đêm (cùng bố cục/kích thước ảnh nền ngày), đặt chồng lên trên — CHUYỂN HẲN alpha 0/1 theo
+   * `TimeManager.getIsNight()` (18h/6h), không còn crossfade dần, xem `updateDayNightVisuals()`. */
   private backgroundNight!: Phaser.GameObjects.Image
   /** Menu chọn hạt giống (mở khi Enter lên ô đã cuốc) — xem `openSeedMenu()`/`confirmSeedMenu()`. Player đứng
    * yên trong lúc menu mở (xem `update()`), điều hướng bằng ←/→, Enter xác nhận trồng, Esc huỷ. */
@@ -406,14 +403,6 @@ export class GameScene extends Phaser.Scene {
       this.timeManager = new TimeManager()
       if (savedGame) this.timeManager.loadState(savedGame.game_time.day, savedGame.game_time.hour)
     }
-    // Overlay tối phủ theo camera (scrollFactor 0), không phải world object — GameObject nên vẫn phải tạo lại
-    // mỗi lần dù timeManager giữ nguyên, khác nhau ở chỗ CHỈ instance TimeManager mới cần giữ.
-    this.nightOverlay = this.add
-      .rectangle(0, 0, this.scale.width, this.scale.height, 0x0a1a3f)
-      .setOrigin(0, 0)
-      .setScrollFactor(0)
-      .setDepth(INTERACTION_POINTER_DEPTH - 1)
-      .setAlpha(this.timeManager.getNightOverlayAlpha())
 
     // Giếng nước tự động tưới ô gần nó mỗi sáng — "mỗi sáng" ăn theo `dayStart` (mốc đêm->ngày thật, ~6h, xem
     // `TimeManager.computeIsNight()`), không phải `dayChange` (mốc nửa đêm 0h) vì "sáng" theo nghĩa thường
@@ -661,12 +650,15 @@ export class GameScene extends Phaser.Scene {
     return (this.scene.get('UIScene') as UIScene | null)?.characterPanel
   }
 
-  /** Đồng bộ mọi hiệu ứng ngày/đêm theo cùng 1 mốc `getNightFraction()` (0-1) — ảnh nền đêm hiện dần bằng alpha
-   * (crossfade lên trên ảnh ngày), lớp phủ tối phủ lên player/prop (chưa có bản vẽ đêm riêng cho chúng). Dùng
-   * chung 1 nguồn % thay vì mỗi chỗ tự tính để không lệch nhịp chuyển cảnh giữa 2 hiệu ứng. */
+  /** Đồng bộ hiệu ứng ngày/đêm — user yêu cầu CHUYỂN HẲN (không nội suy/crossfade dần nữa): đúng 18h alpha ảnh nền
+   * đêm nhảy thẳng lên 1 (che kín ảnh nền ngày, giữ nguyên sắc độ gốc — không tint gì thêm), đúng 6h nhảy về 0.
+   * Đã bỏ hẳn lớp phủ tối toàn màn hình (`nightOverlay` cũ, alpha tới 0.55 phủ luôn lên CẢ ảnh nền) — user báo
+   * "sắc độ ảnh nền vẫn nhợt nhạt" sau khi đã xoá ICC profile (đợt sửa trước): hoá ra vẫn còn lớp phủ đen mờ này
+   * đè thêm lên toàn cảnh mỗi đêm, làm nhạt màu tiếp dù ảnh nền tự nó đã đủ tối/đúng tông đêm rồi — thừa và phản
+   * tác dụng. Player/prop giờ không còn được tối thêm riêng lúc đêm nữa (chấp nhận được, ưu tiên giữ đúng màu
+   * nền theo yêu cầu). */
   private updateDayNightVisuals() {
-    this.backgroundNight.setAlpha(this.timeManager.getNightFraction())
-    this.nightOverlay.setAlpha(this.timeManager.getNightOverlayAlpha())
+    this.backgroundNight.setAlpha(this.timeManager.getIsNight() ? 1 : 0)
   }
 
   /** Ghi ngày/giờ hiện tại vào registry cho UIScene đọc — xem cách làm tương tự ở `selectSeed()`. */
@@ -1364,20 +1356,9 @@ export class GameScene extends Phaser.Scene {
 
   /** Đặt nhà chính người chơi (hiện chỉ cấp 1) lên khoảnh cỏ trống cạnh cụm ô đất, toạ độ tính sẵn trong
    * `data/housePlacement.ts`. Depth theo `bottomY` (đáy nhà) để Y-sort đúng với player.y, giống cách làm với
-   * hàng rào ở `placeFence()`. */
+   * hàng rào ở `placeFence()`. Không vẽ bóng đổ (user yêu cầu bỏ) — khác hàng rào/giếng vẫn còn giữ. */
   private placeHouse() {
     const texture = HOUSE_LEVEL_TEXTURES[PLAYER_HOUSE.level]
-
-    // Sau 2 lần thử hình khối riêng (bầu dục generic rồi silhouette thật của ảnh nhà) đều bị lỗi vị trí/tỉ lệ
-    // khó kiểm soát (xem lịch sử ở progress.md), quay lại đúng công thức đã dùng cho hàng rào (`placeFence()`)
-    // — vốn đã nhìn ổn, không ai phàn nàn: bóng bầu dục mờ viền, đặt sát đáy vật (không lệch/không cách khoảng
-    // trống), chỉ đổi mỗi bề ngang cho phù hợp 1 khối to như nhà.
-    this.addGroundShadow(
-      PLAYER_HOUSE.x,
-      PLAYER_HOUSE.bottomY,
-      PLAYER_HOUSE.width * 0.95,
-      PLAYER_HOUSE.bottomY - 0.5
-    )
 
     this.add
       .image(PLAYER_HOUSE.x, PLAYER_HOUSE.y, texture)

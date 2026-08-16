@@ -4,13 +4,11 @@ import Phaser from 'phaser'
  * chờ N giây thực thì kim đồng hồ phải nhảy đúng N phút). 1 ngày (24h) = 24 phút thực. */
 const HOUR_DURATION_MS = 60_000
 const START_HOUR = 6 // bắt đầu lúc 6:00 sáng, giống hầu hết game farming khác
-/** Mốc chuyển ngày/đêm — có vùng chuyển tiếp dần (hoàng hôn 19h->21h, bình minh 4h->6h) thay vì bật/tắt đột
- * ngột, đúng yêu cầu "Overlay tint màu tối dần" trong dev-schedule.md Sprint 3. */
-const NIGHT_START_HOUR = 19
-const NIGHT_FULL_HOUR = 21
-const DAWN_START_HOUR = 4
-const DAY_FULL_HOUR = 6
-const MAX_NIGHT_ALPHA = 0.55
+/** Mốc chuyển ngày/đêm — CHUYỂN HẲN, không còn vùng chuyển tiếp dần/nội suy như bản đầu (Sprint 3 làm "Overlay
+ * tint màu tối dần" theo dev-schedule.md, nhưng user yêu cầu đổi lại: đúng 18h chuyển hẳn sang `BaseMap_night.png`,
+ * đúng 6h chuyển hẳn về `BaseMap.png`, KHÔNG pha trộn/tint gì thêm — giữ nguyên sắc độ gốc của ảnh nền). */
+const NIGHT_HOUR = 18
+const DAY_HOUR = 6
 
 /** Đồng hồ trong game — hoàn toàn tách biệt với thời gian lớn cây (`FarmManager` dùng giờ THỰC trôi qua theo
  * đúng thiết kế `docs/gameplay/farming.md`, không liên quan gì tới đồng hồ tăng tốc này). TimeManager chỉ phục
@@ -58,30 +56,7 @@ export class TimeManager extends Phaser.Events.EventEmitter {
   }
 
   private computeIsNight(hour: number): boolean {
-    return hour >= NIGHT_FULL_HOUR || hour < DAY_FULL_HOUR
-  }
-
-  /** % đêm hiện tại, 0 (sáng hoàn toàn) -> 1 (đêm sâu hoàn toàn) — nội suy tuyến tính trong khung giờ hoàng
-   * hôn/bình minh để mọi thứ ăn theo (overlay tối, crossfade nền đêm...) chuyển cảnh mượt cùng lúc thay vì mỗi
-   * chỗ tự tính riêng rồi lệch nhịp nhau. */
-  getNightFraction(): number {
-    const h = this.hour
-    if (h >= NIGHT_START_HOUR && h < NIGHT_FULL_HOUR) {
-      return (h - NIGHT_START_HOUR) / (NIGHT_FULL_HOUR - NIGHT_START_HOUR)
-    }
-    if (h >= NIGHT_FULL_HOUR || h < DAWN_START_HOUR) {
-      return 1
-    }
-    if (h >= DAWN_START_HOUR && h < DAY_FULL_HOUR) {
-      return 1 - (h - DAWN_START_HOUR) / (DAY_FULL_HOUR - DAWN_START_HOUR)
-    }
-    return 0
-  }
-
-  /** Alpha lớp phủ tối dùng cho overlay ban đêm (phủ lên player/prop — chưa có bản vẽ ban đêm riêng cho chúng
-   * như nền map) — chỉ là `getNightFraction()` quy đổi sang biên độ tối đa `MAX_NIGHT_ALPHA`. */
-  getNightOverlayAlpha(): number {
-    return this.getNightFraction() * MAX_NIGHT_ALPHA
+    return hour >= NIGHT_HOUR || hour < DAY_HOUR
   }
 
   getHour(): number {

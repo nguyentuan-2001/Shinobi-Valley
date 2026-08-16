@@ -20,6 +20,12 @@
       }
       canvas {
         display: block;
+        /* Phaser render pixel-art sắc nét ở tầng WebGL (pixelArt: true, roundPixels: true trong main.ts) nhưng
+         * trình duyệt vẫn có thể tự làm mờ khi co giãn PHẦN TỬ canvas (do OS/browser display scaling khác
+         * 100%, hoặc devicePixelRatio > 1) — image-rendering ép trình duyệt dùng nearest-neighbor thay vì
+         * bilinear mặc định lúc co giãn, giữ đúng độ sắc nét như ảnh gốc bất kể tỉ lệ hiển thị hệ thống. */
+        /* image-rendering: pixelated;
+        image-rendering: -moz-crisp-edges; */
       }
     </style>
   </head>
