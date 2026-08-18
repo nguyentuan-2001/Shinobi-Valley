@@ -23,6 +23,9 @@ interface FarmTilePlacementDraft {
 
 export interface FarmTilePlacement extends FarmTilePlacementDraft {
   id: number
+  texture: string
+  nightX: number
+  nightY: number
 }
 
 interface PlotGrid {
@@ -33,19 +36,24 @@ interface PlotGrid {
   cols: number
   rows: number
   type: FarmTileType
+  colGap?: number
+  rowGap?: number
 }
 
-const GAP = 2 // khe hở giữa các ô để tách bạch, không dính liền 1 khối
+const DEFAULT_COL_GAP = 4
+const DEFAULT_ROW_GAP = 4
 
 function generateGrid(plot: PlotGrid): FarmTilePlacementDraft[] {
+  const colGap = plot.colGap ?? DEFAULT_COL_GAP
+  const rowGap = plot.rowGap ?? DEFAULT_ROW_GAP
   const tiles: FarmTilePlacementDraft[] = []
   for (let row = 0; row < plot.rows; row++) {
     for (let col = 0; col < plot.cols; col++) {
       tiles.push({
-        x: plot.x + col * plot.cellWidth + plot.cellWidth / 2,
-        y: plot.y + row * plot.cellHeight + plot.cellHeight / 2,
-        width: plot.cellWidth - GAP,
-        height: plot.cellHeight - GAP,
+        x: plot.x + col * (plot.cellWidth + colGap) + plot.cellWidth / 2,
+        y: plot.y + row * (plot.cellHeight + rowGap) + plot.cellHeight / 2,
+        width: plot.cellWidth,
+        height: plot.cellHeight,
         type: plot.type
       })
     }
@@ -54,21 +62,53 @@ function generateGrid(plot: PlotGrid): FarmTilePlacementDraft[] {
 }
 
 /** 3 thảm cỏ trên cùng hàng, giữa 2 đường mòn ngang, ngăn bởi 2 đường mòn dọc — mỗi thảm chia thành nhiều
- * cột luống, mỗi cột 5 ô xếp dọc. `cellWidth`/`cellHeight` bằng nhau nên ô luôn vuông bất kể `cols`/`rows`. */
-const UNTILLED_PLOTS: PlotGrid[] = [
-  { x: 790, y: 405, cellWidth: 26, cellHeight: 26, cols: 3, rows: 4, type: 'untilled' },
-  { x: 885, y: 405, cellWidth: 26, cellHeight: 26, cols: 3, rows: 4, type: 'untilled' },
-  { x: 805, y: 555, cellWidth: 26, cellHeight: 26, cols: 2, rows: 4, type: 'untilled' }
+ * cột luống, mỗi cột 5 ô xếp dọc. `cellWidth`/`cellHeight` bằng nhau nên ô luôn vuông bất kể `cols`/`rows`.
+ * Bản ngày và bản đêm có thể đặt ở vị trí khác nhau vì nền `BaseMap.png` và `BaseMap_night.png` là 2 ảnh
+ * khác nhau (không chỉ tối mà còn địa hình/tiểu tiết khác), nên tách riêng tọa độ cho mỗi bản giống
+ * `FARM_BUILDING_PLACEMENTS_DAY`/`_NIGHT` ở `data/mapPlacements/day.ts`/`night.ts`. */
+const UNTILLED_PLOTS_DAY: PlotGrid[] = [
+  { x: 820, y: 369, cellWidth: 25, cellHeight: 25, cols: 3, rows: 4, type: 'untilled' },
+  { x: 920, y: 369, cellWidth: 25, cellHeight: 25, cols: 3, rows: 4, type: 'untilled' },
+  { x: 1020, y: 369, cellWidth: 25, cellHeight: 25, cols: 3, rows: 4, type: 'untilled' }
 ]
 
-/** 1 thảm cỏ nhỏ ở hàng dưới (giữa đường mòn dọc thứ 3 và thứ 4) — 4x3 = 12 ô chậu nước. */
-const WATER_POT_PLOT: PlotGrid[] = [
-  { x: 863, y: 580, cellWidth: 26, cellHeight: 26, cols: 1, rows: 3, type: 'water_pot' },
-  { x: 890, y: 606, cellWidth: 26, cellHeight: 26, cols: 1, rows: 2, type: 'water_pot' },
-  { x: 915, y: 606, cellWidth: 26, cellHeight: 26, cols: 1, rows: 2, type: 'water_pot' },
-  { x: 941, y: 580, cellWidth: 26, cellHeight: 26, cols: 1, rows: 3, type: 'water_pot' }
+const UNTILLED_PLOTS_NIGHT: PlotGrid[] = [
+  { x: 820, y: 355, cellWidth: 25, cellHeight: 25, cols: 3, rows: 4, type: 'untilled' },
+  { x: 920, y: 355, cellWidth: 25, cellHeight: 25, cols: 3, rows: 4, type: 'untilled' },
+  { x: 1020, y: 355, cellWidth: 25, cellHeight: 25, cols: 3, rows: 4, type: 'untilled' }
 ]
 
-export const FARM_TILE_PLACEMENTS: FarmTilePlacement[] = [...UNTILLED_PLOTS, ...WATER_POT_PLOT]
+const WATER_POT_PLOT_NIGHT: PlotGrid[] = [
+  { x: 690, y: 560, cellWidth: 25, cellHeight: 25, cols: 4, rows: 3, type: 'water_pot' },
+  { x: 805, y: 503, cellWidth: 25, cellHeight: 25, cols: 2, rows: 5, type: 'water_pot' }
+]
+
+const WATER_POT_PLOT_DAY: PlotGrid[] = [
+  { x: 690, y: 570, cellWidth: 25, cellHeight: 25, cols: 4, rows: 3, type: 'water_pot' },
+  { x: 805, y: 513, cellWidth: 25, cellHeight: 25, cols: 2, rows: 5, type: 'water_pot' }
+]
+
+const FARM_TILE_TEXTURES: Record<FarmTileType, string> = {
+  untilled: 'farm_soil_untilled',
+  tilled: 'farm_soil_tilled',
+  water_pot: 'farm_soil_water_pot'
+}
+
+const DAY_GRID = [...UNTILLED_PLOTS_DAY, ...WATER_POT_PLOT_DAY]
   .flatMap(generateGrid)
   .map((tile, id) => ({ ...tile, id }))
+const NIGHT_GRID = [...UNTILLED_PLOTS_NIGHT, ...WATER_POT_PLOT_NIGHT]
+  .flatMap(generateGrid)
+  .map((tile, id) => ({ ...tile, id }))
+const NIGHT_BY_ID = new Map(NIGHT_GRID.map((t) => [t.id, t]))
+
+export const FARM_TILE_PLACEMENTS: FarmTilePlacement[] = DAY_GRID.map((dayTile) => {
+  const nightTile = NIGHT_BY_ID.get(dayTile.id) ?? dayTile
+  return {
+    ...dayTile,
+    id: dayTile.id,
+    texture: FARM_TILE_TEXTURES[dayTile.type],
+    nightX: nightTile.x,
+    nightY: nightTile.y
+  }
+})

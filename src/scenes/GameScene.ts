@@ -54,11 +54,17 @@ const FARM_TILE_DEPTH = -1
 /** Cây trồng vẽ ngay trên lớp đất — vẫn thấp hơn player (player depth = y luôn > 0), không cần Y-sort riêng
  * vì cây coi như nằm phẳng trên mặt đất giống ô đất, không có chiều cao để player đi "sau" nó. */
 const CROP_DEPTH = FARM_TILE_DEPTH + 0.2
+/** Shadow nhẹ cho cây trồng — nằm sát dưới chân cây, alpha vừa phải để thấy rõ nhưng không đè nét sprite. */
+const CROP_SHADOW_DEPTH = CROP_DEPTH - 0.01
+const CROP_SHADOW_ALPHA = 0.6
+/** Tỷ lệ width shadow so với tile.width — rộng hơn tile 1 chút để thấy rõ vùng bóng. */
+const CROP_SHADOW_WIDTH_RATIO = 1.3
 /** Độ ẩm 50-100% quy đổi thẳng sang tỉ lệ đầy của thanh (50%→nửa thanh, 100%→đầy) — không remap lại khoảng, để
  * người chơi học được "thanh không bao giờ về hẳn 0, tưới là đầy lại" đúng như cơ chế thật. */
 const GROWTH_BAR_WIDTH_RATIO = 0.8
 const GROWTH_BAR_HEIGHT = 4
 const SHADOW_TEXTURE = 'shadow_oval'
+const CROP_SHADOW_TEXTURE = 'crop_shadow'
 const INTERACTION_POINTER_TEXTURE = 'interaction_pointer'
 /** Luôn vẽ trên cùng — con trỏ là chỉ dẫn UI gắn vào world, phải nổi trên mọi prop (nhà, hàng rào, cây...). */
 const INTERACTION_POINTER_DEPTH = 999_999
@@ -188,8 +194,20 @@ export class GameScene extends Phaser.Scene {
   private farmManager!: FarmManager
   /** Ảnh đất (untilled/tilled) của từng ô, theo `FarmTilePlacement.id` — cần giữ lại để đổi texture khi cuốc. */
   private readonly soilImages = new Map<number, Phaser.GameObjects.Image>()
+  /** Vị trí night của từng ô đất — dùng chung `id` với `soilImages`, lưu để `updateDayNightVisuals()` di chuyển
+   * ô đất sang vị trí đêm khi trời tối (vì nền ngày/đêm khác nhau nên ô đất cần dịch chuyển). */
+  private readonly tileNightPositions = new Map<number, { x: number; y: number }>()
+  private readonly tileDayPositions = new Map<number, { x: number; y: number }>()
   /** Ảnh cây trồng trên từng ô đang có cây (tạo khi gieo, xoá khi ô hết cây) — key cũng là `FarmTilePlacement.id`. */
   private readonly cropImages = new Map<number, Phaser.GameObjects.Image>()
+  /** Shadow nhẹ dưới chân cây trồng — tạo/xoá cùng nhịp với `cropImages`, depth thấp hơn cây 1 chút. */
+  private readonly cropShadows = new Map<number, Phaser.GameObjects.Image>()
+  /** Vị trí ngày/đêm của cây trồng — dùng chung `id` với `cropImages`/`cropShadows`, lưu để `updateDayNightVisuals()`
+   * di chuyển cây sang vị trí đêm khi trời tối (đi cùng ô đất). */
+  private readonly cropDayPositions = new Map<number, { x: number; y: number }>()
+  private readonly cropNightPositions = new Map<number, { x: number; y: number }>()
+  private readonly cropShadowDayPositions = new Map<number, { x: number; y: number }>()
+  private readonly cropShadowNightPositions = new Map<number, { x: number; y: number }>()
   private selectedCropId: string = PLANTABLE_CROP_IDS[1]
   /** Mũi tên báo "khối đang tương tác được" (ô đất dưới chân, nhà khi đứng gần...) — xem `updateInteractionPointer()`. */
   private interactionPointer!: Phaser.GameObjects.Image
@@ -200,6 +218,15 @@ export class GameScene extends Phaser.Scene {
    * đã VỀ 0 ngay khung hình vừa dừng, trong khi ràng buộc chống nhảy lùi cần nhớ hướng đó thêm 1 chút NỮA qua
    * `FARM_TILE_STOP_GRACE_MS` (xem `resolveFarmTileTarget()`). */
   private lastFarmMoveDir = { x: 0, y: 0 }
+  private cameraFollowEnabled = true
+  private cameraDrag: {
+    active: boolean
+    startPointerX: number
+    startPointerY: number
+    lastPointerX: number
+    lastPointerY: number
+  } | null = null
+  private cameraFollowResumeAt = 0
   private timeManager!: TimeManager
   /** Toạ độ Farm gần nhất của player, đọc lại được kể cả sau khi scene này shutdown (`this.player` là
    * GameObject, đã bị Phaser huỷ lúc đó — đọc trực tiếp `this.player.x/y` không an toàn). Cập nhật mỗi frame
@@ -349,6 +376,7 @@ export class GameScene extends Phaser.Scene {
     // trong lúc fade-in, không "kế thừa" giá trị `false` còn sót từ lần trước.
     this.isTransitioning = true
     this.createShadowTexture()
+    this.createCropShadowTexture()
     this.createMoistureOverlayTexture()
     this.createWaterDropletTexture()
     this.interactionPointer = this.add
@@ -470,6 +498,61 @@ export class GameScene extends Phaser.Scene {
 
     this.cameras.main.setBounds(0, 0, background.displayWidth, background.displayHeight)
     this.cameras.main.startFollow(this.player, true)
+
+    // Kéo chuột trên map để pan camera — tạm tắt follow trong lúc kéo, sau đó tự động quay về follow player
+    // khi nhân vật di chuyển. Chỉ hoạt động khi không mở menu/UI phủ lên trên.
+    this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      const uiBlocking =
+        this.seedMenuOpen ||
+        this.getCharacterPanel()?.isOpen ||
+        this.bulkActionsOpen ||
+        this.isTransitioning ||
+        this.fishingState !== 'idle'
+
+      if (!uiBlocking) {
+        this.cameraDrag = {
+          active: true,
+          startPointerX: pointer.x,
+          startPointerY: pointer.y,
+          lastPointerX: pointer.x,
+          lastPointerY: pointer.y
+        }
+        this.cameras.main.stopFollow()
+        this.cameraFollowEnabled = false
+      }
+
+      // Debug: click vào map log toạ độ world (x,y) ra console — tiện dò toạ độ khi viết collisionZones.ts/
+      // farmTiles.ts mà không cần mở EditorScene. Bỏ qua khi đang kéo camera (drag đã bắt đầu ở trên).
+      if (!this.cameraDrag?.active) {
+        const world = this.cameras.main.getWorldPoint(pointer.x, pointer.y)
+        console.log(`🚀 [GameScene] click x=${Math.round(world.x)} y=${Math.round(world.y)}`)
+      }
+    })
+
+    this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
+      if (!this.cameraDrag?.active) return
+      const dx = pointer.x - this.cameraDrag.lastPointerX
+      const dy = pointer.y - this.cameraDrag.lastPointerY
+      this.cameras.main.scrollX -= dx
+      this.cameras.main.scrollY -= dy
+      this.cameraDrag.lastPointerX = pointer.x
+      this.cameraDrag.lastPointerY = pointer.y
+    })
+
+    this.input.on('pointerup', () => {
+      if (!this.cameraDrag?.active) return
+      this.cameraDrag = null
+      // Đợi 300ms sau khi thả chuột — nếu player chưa di chuyển thì giữ nguyên vị trí camera hiện tại,
+      // nếu player di chuyển thì update() sẽ tự bật follow lại.
+      this.cameraFollowResumeAt = this.time.now + 300
+    })
+
+    // Thả chuột ngoài cửa sổ game cũng phải reset drag, không để treo trạng thái kéo.
+    this.input.on('pointerupoutside', () => {
+      if (!this.cameraDrag?.active) return
+      this.cameraDrag = null
+      this.cameraFollowResumeAt = 0
+    })
 
     // selectSeed()/updateTimeHud() ghi vào registry TRƯỚC khi launch UIScene — để UIScene.create() đọc registry
     // lần đầu đã có sẵn giá trị đúng, không cần chờ event 'changedata' bắn ra mới hiện chữ.
@@ -653,6 +736,18 @@ export class GameScene extends Phaser.Scene {
     this.timeManager.update(delta)
     this.updateDayNightVisuals()
     this.updateTimeHud()
+
+    // Tự động bật lại camera follow khi player di chuyển sau khi đã kéo xong — chỉ bật khi đã quá
+    // thời gian chờ (cameraFollowResumeAt), tránh bật lại ngay khi vừa thả chuột mà player chưa đi.
+    if (
+      !this.cameraFollowEnabled &&
+      this.time.now >= this.cameraFollowResumeAt &&
+      this.player.body &&
+      (Math.abs(this.player.body.velocity.x) > 1 || Math.abs(this.player.body.velocity.y) > 1)
+    ) {
+      this.cameraFollowEnabled = true
+      this.cameras.main.startFollow(this.player, true, 0.3, 0.3)
+    }
   }
 
   /** Sprint 6 — chụp lại toàn bộ state cần lưu (farm/thời gian/stats/túi đồ/vị trí) thành 1 `SaveState` hoàn
@@ -708,6 +803,34 @@ export class GameScene extends Phaser.Scene {
       pair.day.setAlpha(isNight ? 0 : 1)
       pair.night.setAlpha(isNight ? 1 : 0)
     }
+    for (const [tileId, image] of this.soilImages) {
+      const dayPos = this.tileDayPositions.get(tileId)
+      const nightPos = this.tileNightPositions.get(tileId)
+      if (dayPos && nightPos) {
+        image.setPosition(isNight ? nightPos.x : dayPos.x, isNight ? nightPos.y : dayPos.y)
+      }
+    }
+    for (const [tileId, overlay] of this.moistureOverlays) {
+      const dayPos = this.tileDayPositions.get(tileId)
+      const nightPos = this.tileNightPositions.get(tileId)
+      if (dayPos && nightPos) {
+        overlay.setPosition(isNight ? nightPos.x : dayPos.x, isNight ? nightPos.y : dayPos.y)
+      }
+    }
+    for (const [tileId, cropImage] of this.cropImages) {
+      const dayPos = this.cropDayPositions.get(tileId)
+      const nightPos = this.cropNightPositions.get(tileId)
+      if (dayPos && nightPos) {
+        cropImage.setPosition(isNight ? nightPos.x : dayPos.x, isNight ? nightPos.y : dayPos.y)
+      }
+    }
+    for (const [tileId, shadow] of this.cropShadows) {
+      const dayPos = this.cropShadowDayPositions.get(tileId)
+      const nightPos = this.cropShadowNightPositions.get(tileId)
+      if (dayPos && nightPos) {
+        shadow.setPosition(isNight ? nightPos.x : dayPos.x, isNight ? nightPos.y : dayPos.y)
+      }
+    }
   }
 
   /** Ghi ngày/giờ hiện tại vào registry cho UIScene đọc — xem cách làm tương tự ở `selectSeed()`. */
@@ -725,18 +848,23 @@ export class GameScene extends Phaser.Scene {
   }
 
   /** Đặt các ô đất trồng cây lên 4 thảm cỏ mở (3 thảm trên dạng luống cày cho ô chưa cuốc, 1 thảm dưới cho
-   * 12 ô chậu nước) — toạ độ tính sẵn trong `data/farmTiles.ts`. Cả `untilled` VÀ `water_pot` đều giữ reference
-   * vào `soilImages` (theo `id`) — `untilled` để `syncFarmVisuals()` đổi texture khi cuốc đất, `water_pot` chỉ
-   * để ẩn/hiện theo có cây hay không (chậu nước không đổi texture qua các state, xem `syncFarmVisuals()`). */
+   * 12 ô chậu nước) — toạ độ tính sẵn trong `data/farmTiles.ts`. Ô đất dùng chung 1 texture, chỉ có 1 image,
+   * nhưng lưu vị trí riêng cho ngày/đêm vì nền `BaseMap.png`/`BaseMap_night.png` khác nhau. Khi trời tối,
+   * `updateDayNightVisuals()` sẽ di chuyển ô đất sang vị trí đêm (`tile.nightX`/`nightY`). */
   private placeFarmTiles() {
     for (const tile of FARM_TILE_PLACEMENTS) {
-      const textureKey = FARM_TILE_TEXTURES[tile.type]
+      const textureKey = tile.texture
       const scale = SOIL_TEXTURE_DISPLAY_SCALE[textureKey] ?? 1
       const image = this.add
         .image(tile.x, tile.y, textureKey)
         .setDisplaySize(tile.width * scale, tile.height * scale)
         .setDepth(FARM_TILE_DEPTH)
-      if (tile.type === 'untilled' || tile.type === 'water_pot') this.soilImages.set(tile.id, image)
+
+      if (tile.type === 'untilled' || tile.type === 'water_pot') {
+        this.soilImages.set(tile.id, image)
+        this.tileDayPositions.set(tile.id, { x: tile.x, y: tile.y })
+        this.tileNightPositions.set(tile.id, { x: tile.nightX, y: tile.nightY })
+      }
     }
   }
 
@@ -1217,11 +1345,26 @@ export class GameScene extends Phaser.Scene {
         const textureKey = this.cropTextureKey(tile.cropId, stage)
         let image = cropImage
         if (!image) {
+          const placement = FARM_TILE_PLACEMENTS.find((p) => p.id === tile.id)
+          const nightX = placement ? placement.nightX : tile.x
+          const nightY = placement ? placement.nightY : tile.y
           image = this.add
             .image(tile.x, tile.y, textureKey)
             .setDisplaySize(tile.width * 0.85, tile.height * 0.85)
             .setDepth(CROP_DEPTH)
           this.cropImages.set(tile.id, image)
+          this.cropDayPositions.set(tile.id, { x: tile.x, y: tile.y })
+          this.cropNightPositions.set(tile.id, { x: nightX, y: nightY })
+          const shadowWidth = tile.width * CROP_SHADOW_WIDTH_RATIO
+          const shadowHeight = shadowWidth * (20 / 48)
+          const shadow = this.add
+            .image(tile.x, tile.y + tile.height * 0.25, CROP_SHADOW_TEXTURE)
+            .setDisplaySize(shadowWidth, shadowHeight)
+            .setDepth(CROP_SHADOW_DEPTH)
+            .setAlpha(CROP_SHADOW_ALPHA)
+          this.cropShadows.set(tile.id, shadow)
+          this.cropShadowDayPositions.set(tile.id, { x: tile.x, y: tile.y + tile.height * 0.25 })
+          this.cropShadowNightPositions.set(tile.id, { x: nightX, y: nightY + tile.height * 0.25 })
         } else if (image.texture.key !== textureKey) {
           image.setTexture(textureKey)
         }
@@ -1233,6 +1376,15 @@ export class GameScene extends Phaser.Scene {
       } else if (cropImage) {
         cropImage.destroy()
         this.cropImages.delete(tile.id)
+        this.cropDayPositions.delete(tile.id)
+        this.cropNightPositions.delete(tile.id)
+        this.cropShadowDayPositions.delete(tile.id)
+        this.cropShadowNightPositions.delete(tile.id)
+        const shadow = this.cropShadows.get(tile.id)
+        if (shadow) {
+          shadow.destroy()
+          this.cropShadows.delete(tile.id)
+        }
       }
 
       // Overlay đất ẩm — chỉ hiện khi ô đang có cây sống (`getMoisture()` trả về số, null nếu không có gì để
@@ -1397,7 +1549,7 @@ export class GameScene extends Phaser.Scene {
    * EditorScene). */
   private placeFence() {
     for (const fence of FENCE_PLACEMENTS) {
-      this.addGroundShadow(fence.x, fence.bottomY, fence.width * 0.85, fence.bottomY - 0.5)
+      this.addGroundShadow(fence.x, fence.bottomY - 5, fence.width * 0.85, fence.bottomY - 0.5)
       this.add
         .image(fence.x, fence.y, fence.texture)
         .setDisplaySize(fence.width, fence.height)
@@ -1442,15 +1594,8 @@ export class GameScene extends Phaser.Scene {
   /** Đặt giếng nước lên khoảnh cỏ mở sát cụm ô đất dưới, toạ độ tính sẵn trong `data/wellPlacement.ts` — công
    * trình thuần tự động (không có tương tác Enter thủ công, xem `autoWaterNearWell()`), khác nhà/hàng rào chỉ
    * mang tính trang trí + Y-sort. Bản ngày đặt tại `WELL_PLACEMENT_DAY`, bản đêm tại `WELL_PLACEMENT_NIGHT` (2
-   * vị trí TÁCH RIÊNG), cùng cách ghép cặp bright/night + đẩy vào `dayNightPairs` như `placeHouse()`. Bóng đổ
-   * dưới đất vẽ theo vị trí NGÀY (bản đêm không có bóng riêng — chấp nhận được vì 2 vị trí chỉ lệch vài chục px). */
+   * vị trí TÁCH RIÊNG), cùng cách ghép cặp bright/night + đẩy vào `dayNightPairs` như `placeHouse()`. */
   private placeWell() {
-    this.addGroundShadow(
-      WELL_PLACEMENT_DAY.x,
-      WELL_PLACEMENT_DAY.bottomY,
-      WELL_PLACEMENT_DAY.width * 0.9,
-      WELL_PLACEMENT_DAY.bottomY - 0.5
-    )
     const day = this.add
       .image(WELL_PLACEMENT_DAY.x, WELL_PLACEMENT_DAY.y, 'building_gieng_nuoc_bright')
       .setDisplaySize(WELL_CANVAS_SIZE, WELL_CANVAS_SIZE)
@@ -2010,6 +2155,30 @@ export class GameScene extends Phaser.Scene {
     ctx.fill()
     canvasTexture.refresh()
     this.textures.get(SHADOW_TEXTURE).setFilter(Phaser.Textures.FilterMode.LINEAR)
+  }
+
+  /** Texture shadow riêng cho cây trồng — đậm hơn ở giữa, nhạt dần ra biên theo gradient toả tròn mạnh hơn
+   * so với `shadow_oval` thông thường. Dùng riêng cho crop shadow để không ảnh hưởng bóng của hàng rào/nhà. */
+  private createCropShadowTexture() {
+    if (this.textures.exists(CROP_SHADOW_TEXTURE)) return
+    const width = 48
+    const height = 20
+    const canvasTexture = this.textures.createCanvas(CROP_SHADOW_TEXTURE, width, height)
+    if (!canvasTexture) return
+    const ctx = canvasTexture.getContext()
+    const cx = width / 2
+    const cy = height / 2
+    const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, cx)
+    gradient.addColorStop(0, 'rgba(0,0,0,0.75)')
+    gradient.addColorStop(0.35, 'rgba(0,0,0,0.5)')
+    gradient.addColorStop(0.7, 'rgba(0,0,0,0.15)')
+    gradient.addColorStop(1, 'rgba(0,0,0,0)')
+    ctx.fillStyle = gradient
+    ctx.beginPath()
+    ctx.ellipse(cx, cy, cx, cy, 0, 0, Math.PI * 2)
+    ctx.fill()
+    canvasTexture.refresh()
+    this.textures.get(CROP_SHADOW_TEXTURE).setFilter(Phaser.Textures.FilterMode.LINEAR)
   }
 
   /** Overlay đất ẩm tạm (vẽ bằng code, không cần asset riêng — xem `syncFarmVisuals()`) — 1 ô vuông xanh-nâu

@@ -104,14 +104,14 @@ function generateFenceRun(run: FenceRun): FencePlacement[] {
   return tiles
 }
 
-const FENCE_RECT = { x: 1005, y: 395, width: 318, height: 130 }
+const FENCE_RECT = { x: 895, y: 510, width: 210, height: 130 }
 
 /** 5 đoạn ngang (36px/đoạn) vừa khít 180px cạnh trên/dưới; 4 đoạn dọc (~71px/đoạn) cho cạnh trái/phải — lố
  * nhẹ ~6px so với 279px chiều cao thảm (chấp nhận được, xem nguyên tắc "không tự khớp khít viền" ở farmTiles.ts). */
 const FENCE_RUNS: FenceRun[] = [
-  { x: FENCE_RECT.x, y: FENCE_RECT.y, count: 9, texture: 'fence_horizontal' },
-  { x: FENCE_RECT.x, y: FENCE_RECT.y + FENCE_RECT.height, count: 9, texture: 'fence_horizontal' },
-  { x: FENCE_RECT.x + 5, y: FENCE_RECT.y, count: 1, texture: 'fence_vertical' },
+  { x: FENCE_RECT.x, y: FENCE_RECT.y, count: 6, texture: 'fence_horizontal' },
+  { x: FENCE_RECT.x, y: FENCE_RECT.y + FENCE_RECT.height, count: 6, texture: 'fence_horizontal' },
+  { x: FENCE_RECT.x + 8, y: FENCE_RECT.y, count: 1, texture: 'fence_vertical' },
   { x: FENCE_RECT.x + FENCE_RECT.width, y: FENCE_RECT.y, count: 2, texture: 'fence_vertical' }
 ]
 
@@ -137,11 +137,11 @@ export const FARM_BUILDING_PLACEMENTS: FarmBuildingPlacement[] = [
   },
   {
     id: 'gieng_nuoc',
-    x: 780,
-    y: 600,
+    x: 763,
+    y: 513,
     width: 78,
     height: 83,
-    bottomY: 600 + 83 / 2,
+    bottomY: 513 + 83 / 2,
     canvasSize: 250
   },
   {
